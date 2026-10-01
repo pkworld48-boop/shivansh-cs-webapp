@@ -5,16 +5,22 @@ from shapely.geometry import LineString, Polygon
 import io
 import zipfile
 
-# ================= PAGE SETUP =================
+# ================= PAGE SETUP & CSS =================
 st.set_page_config(page_title="Shiv Ansh Infra Earthwork CS Engine", layout="wide")
-hide_st_style = """
+
+# CSS to remove extra top space and hide default elements
+custom_css = """
 <style>
 #MainMenu {visibility: hidden;}
 header {visibility: hidden;}
 footer {visibility: hidden;}
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
 </style>
 """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+st.markdown(custom_css, unsafe_allow_html=True)
 
 if 'ogl_df' not in st.session_state:
     st.session_state.ogl_df = pd.DataFrame()
@@ -102,15 +108,22 @@ with col2:
 # ================= MAIN AREA =================
 if not st.session_state.ogl_df.empty:
     chainages = st.session_state.ogl_df['Chainage'].unique()
-    ch_sel = st.selectbox("Select Chainage to View", chainages)
+    
+    # Dropdown in a smaller column
+    col_sel, col_msg = st.columns([2, 10])
+    with col_sel:
+        ch_sel = st.selectbox("Select Chainage", chainages)
+        
     frl_val = st.session_state.frl_dict.get(ch_sel, None)
     
-    if frl_val is not None:
-        st.success(f"Active FRL: {frl_val} m")
-    else:
-        st.error("FRL Data Missing for this Chainage!")
+    with col_msg:
+        st.write("") # For vertical alignment
+        if frl_val is not None:
+            st.success(f"Active FRL: {frl_val} m")
+        else:
+            st.error("FRL Data Missing for this Chainage!")
 
-    tab1, tab2, tab3 = st.tabs(["Cross Section", "L-Section", "Live Data"])
+    tab1, tab2 = st.tabs(["Cross Section", "L-Section"])
 
     def get_elev(line, target_x):
         vert = LineString([(target_x, -1000), (target_x, 1000)])
@@ -217,6 +230,16 @@ if not st.session_state.ogl_df.empty:
                 buf = io.BytesIO()
                 fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
                 st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf")
+                
+                # Editor now below the cross-section
+                st.subheader("✏️ Edit OGL Data for this Chainage")
+                current_ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == ch_sel].copy()
+                edited_ch_df = st.data_editor(current_ch_df, use_container_width=True, num_rows="dynamic", key=f"cs_data_editor_{ch_sel}")
+                
+                if not edited_ch_df.equals(current_ch_df):
+                    other_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] != ch_sel]
+                    st.session_state.ogl_df = pd.concat([other_df, edited_ch_df], ignore_index=True)
+                    st.rerun()
 
     with tab2:
         st.subheader("L-Section Profile")
@@ -266,18 +289,6 @@ if not st.session_state.ogl_df.empty:
                 buf_l = io.BytesIO()
                 fig_l.savefig(buf_l, format="pdf", bbox_inches="tight")
                 st.download_button(label="🖨️ Download L-Section (PDF)", data=buf_l.getvalue(), file_name="L_Section.pdf", mime="application/pdf")
-
-    with tab3:
-        st.subheader("✏️ Live OGL Data Editor")
-        st.info("यहाँ आप किसी भी वैल्यू पर क्लिक करके उसे बदल सकते हैं। डेटा बदलते ही ग्राफ अपने आप अपडेट हो जाएगा!")
-        
-        # Streamlit Data Editor implementation
-        edited_df = st.data_editor(st.session_state.ogl_df, use_container_width=True, num_rows="dynamic", key="live_editor")
-        
-        # Update session state if changes are made
-        if not edited_df.equals(st.session_state.ogl_df):
-            st.session_state.ogl_df = edited_df
-            st.rerun()
 
     st.markdown("---")
     st.subheader("📦 Advanced Exports")
