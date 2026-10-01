@@ -7,7 +7,7 @@ import zipfile
 
 st.set_page_config(page_title="Shiv Ansh Infra - Studio", layout="wide")
 
-# NAYA CODE: Upar ka menu, GitHub icon aur footer hide karne ke liye
+# Upar ka menu, GitHub icon aur footer hide karne ke liye
 hide_st_style = """
             <style>
             #MainMenu {visibility: hidden;}
@@ -22,7 +22,7 @@ if 'ogl_df' not in st.session_state: st.session_state.ogl_df = pd.DataFrame()
 if 'frl_dict' not in st.session_state: st.session_state.frl_dict = {}
 
 st.title("Shiv Ansh Infra - Multi-Chainage C/S & L-Section Studio")
-st.markdown("**Cloud Edition:** Vertical Tables | AutoCAD Hatching | Trapezoidal Volumes")
+st.markdown("**Cloud Edition:** Live Editing | Vertical Tables | AutoCAD Hatching | Trapezoidal Volumes")
 
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
     if slope_ratio == 0:
@@ -98,7 +98,8 @@ if not st.session_state.ogl_df.empty:
     else:
         st.error("FRL Data Missing for this Chainage!")
 
-    tab1, tab2, tab3 = st.tabs(["📈 C/S Preview", "📈 L-Section Preview", "📊 Data Grid & Export"])
+    # TAB 3 KA NAAM CHANGE KIYA HAI: "Live Data Editor"
+    tab1, tab2, tab3 = st.tabs(["📈 C/S Preview", "📈 L-Section Preview", "✏️ Live Data Editor & Export"])
 
     # ------------------ CROSS SECTION ------------------
     def draw_cs(current_ch):
@@ -164,7 +165,7 @@ if not st.session_state.ogl_df.empty:
         the_table.set_fontsize(9)
         
         for (row, col), cell in the_table.get_celld().items():
-            if col >= 0: cell.get_text().set_rotation(90) # VERTICAL TEXT
+            if col >= 0: cell.get_text().set_rotation(90) 
             
         fig.text(0.20, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
         fig.text(0.50, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
@@ -182,12 +183,11 @@ if not st.session_state.ogl_df.empty:
         return fig
 
     with tab1:
-        st.subheader("Cross Section")
+        st.subheader("Cross Section Preview")
         if frl_val is not None:
             fig_cs = draw_cs(ch_sel)
             st.pyplot(fig_cs)
             
-            # Single PDF Download
             buf = io.BytesIO()
             fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
             st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf")
@@ -230,14 +230,13 @@ if not st.session_state.ogl_df.empty:
                 t_table.auto_set_font_size(False)
                 t_table.set_fontsize(8)
                 for (row, col), cell in t_table.get_celld().items():
-                    if col >= 0: cell.get_text().set_rotation(90) # VERTICAL TEXT
+                    if col >= 0: cell.get_text().set_rotation(90) 
 
                 ax_l.set_title("Longitudinal Section (L-Section) Profile", fontweight='bold')
                 ax_l.set_ylabel("Elevation (m)")
                 ax_l.grid(True, linestyle=':', alpha=0.7)
                 ax_l.legend(loc="upper right")
                 
-                # 3m BOTTOM / 5m TOP MARGINS
                 true_y_min = min(ogl_elevs + frl_elevs)
                 true_y_max = max(ogl_elevs + frl_elevs)
                 ax_l.set_ylim(true_y_min - 3, true_y_max + 5)
@@ -251,12 +250,26 @@ if not st.session_state.ogl_df.empty:
                 fig_l.savefig(buf_l, format="pdf", bbox_inches="tight")
                 st.download_button(label="🖨️ Download L-Section (PDF)", data=buf_l.getvalue(), file_name="L_Section.pdf", mime="application/pdf")
 
-    # ------------------ DATA GRID & BATCH EXPORT ------------------
+    # ------------------ NAYA: LIVE DATA EDITOR & BATCH EXPORT ------------------
     with tab3:
-        st.subheader("OGL Data Grid")
-        st.dataframe(st.session_state.ogl_df)
+        st.subheader("✏️ Live OGL Data Editor")
+        st.info("Aap yahan seedhe kisi bhi cell par click karke Elevation, Offset ya Chainage change kar sakte hain. Nayi row add karne ke liye sabse niche click karein. Change karte hi graph automatic update ho jayega!")
 
-        st.subheader("Advanced Exports")
+        # Yahan humne st.dataframe ki jagah st.data_editor laga diya hai
+        edited_df = st.data_editor(
+            st.session_state.ogl_df,
+            use_container_width=True,
+            num_rows="dynamic", # Isse aap nai row add ya delete kar sakte hain
+            key="live_editor"
+        )
+        
+        # Agar user ne kuch edit kiya hai, toh usko save karke page refresh kar do
+        if not edited_df.equals(st.session_state.ogl_df):
+            st.session_state.ogl_df = edited_df
+            st.rerun() # Refresh karte hi naya graph ban jayega
+
+        st.markdown("---")
+        st.subheader("📦 Advanced Exports")
         
         # --- Batch PDF Export ---
         if st.button("📦 Generate Batch PDF (ZIP)"):
