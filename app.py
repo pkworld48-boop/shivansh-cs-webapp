@@ -216,7 +216,7 @@ if not st.session_state.ogl_df.empty:
                 ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f >= o for f, o in zip(frl_elevs, ogl_elevs)], color='blue', alpha=0.15, label='Fill Area')
                 ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f < o for f, o in zip(frl_elevs, ogl_elevs)], color='red', alpha=0.15, label='Cut Area')
 
-                fig_l.subplots_adjust(left=0.15, bottom=0.10, right=0.95, top=0.90)
+                fig_l.subplots_adjust(left=0.15, bottom=0.55, right=0.95, top=0.90)
                 ax_l.set_xticks([]) 
                 
                 row_frl = [f"{v:.3f}" for v in frl_elevs]
