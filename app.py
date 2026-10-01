@@ -324,4 +324,3 @@ if not st.session_state.ogl_df.empty:
                     st.download_button(label="⬇ Download QTY Sheet (CSV)", data=csv, file_name="Earthwork_Qty_Sheet.csv", mime="text/csv")
 else:
     st.info("Please upload OGL CSV from the sidebar to begin.")
-```
