@@ -7,6 +7,16 @@ import zipfile
 
 st.set_page_config(page_title="Shiv Ansh Infra - Studio", layout="wide")
 
+# NAYA CODE: Upar ka menu, GitHub icon aur footer hide karne ke liye
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            header {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
 # Session State for Data
 if 'ogl_df' not in st.session_state: st.session_state.ogl_df = pd.DataFrame()
 if 'frl_dict' not in st.session_state: st.session_state.frl_dict = {}
@@ -309,6 +319,6 @@ if not st.session_state.ogl_df.empty:
                     df_qty = pd.DataFrame(qty_data)
                     st.dataframe(df_qty)
                     csv = df_qty.to_csv(index=False).encode('utf-8')
-                    st.download_button(label="⬇️️ Download QTY Sheet (CSV)", data=csv, file_name="Earthwork_Qty_Sheet.csv", mime="text/csv")
+                    st.download_button(label="⬇ Download QTY Sheet (CSV)", data=csv, file_name="Earthwork_Qty_Sheet.csv", mime="text/csv")
 else:
     st.info("Please upload OGL CSV from the sidebar to begin.")
