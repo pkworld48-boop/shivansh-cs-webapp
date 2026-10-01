@@ -156,7 +156,7 @@ if not st.session_state.ogl_df.empty:
 
         fig.subplots_adjust(left=0.15, bottom=0.60, right=0.95, top=0.92)
         ax.set_xticks([])
-        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -0.65, 1, 0.9])
+        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -1.1, 1, 0.7])
         the_table.auto_set_font_size(False)
         the_table.set_fontsize(9)
         
