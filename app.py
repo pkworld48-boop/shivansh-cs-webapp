@@ -204,9 +204,9 @@ if not st.session_state.ogl_df.empty:
             if col >= 0:
                 cell.get_text().set_rotation(90)
                 
-        fig.text(0.20, 0.01, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
-        fig.text(0.50, 0.01, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
-        fig.text(0.80, 0.01, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
+        fig.text(0.20, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
+        fig.text(0.50, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
+        fig.text(0.80, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
         
         ax.set_title(f"{title_prefix} {current_ch}")
         ax.set_ylabel("Elevation (m)")
