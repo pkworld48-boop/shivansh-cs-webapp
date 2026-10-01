@@ -154,7 +154,7 @@ if not st.session_state.ogl_df.empty:
             ax.fill_between(sorted_x, y_o, y_p, where=[p < o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='lightpink', edgecolor='red', alpha=0.4, hatch='\\\\\\', label='Cut Hatch')
         except: pass
 
-        fig.subplots_adjust(left=0.30, bottom=0.60, right=0.95, top=0.92)
+        fig.subplots_adjust(left=0.150, bottom=0.60, right=0.95, top=0.92)
         ax.set_xticks([])
         the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -0.8, 1, 0.7])
         the_table.auto_set_font_size(False)
@@ -175,7 +175,7 @@ if not st.session_state.ogl_df.empty:
         ax.legend(loc="upper right", framealpha=1.0)
         
         x_span = max(sorted_x) - min(sorted_x) if sorted_x else 20
-        ax.set_xlim(min(sorted_x) - x_span * 0.05, max(sorted_x) + x_span * 0.35) 
+        ax.set_xlim(min(sorted_x) - x_span * 0.25, max(sorted_x) + x_span * 0.55) 
         y_min, y_max = ax.get_ylim()
         ax.set_ylim(y_min - (y_max - y_min)*0.05, y_max + (y_max - y_min) * 0.55)
         return fig
