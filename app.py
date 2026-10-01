@@ -119,7 +119,7 @@ if not st.session_state.ogl_df.empty:
         if min(prop_x) < plot_ogl_x[0]: plot_ogl_x.insert(0, min(prop_x)); plot_ogl_y.insert(0, plot_ogl_y[0]) 
         if max(prop_x) > plot_ogl_x[-1]: plot_ogl_x.append(max(prop_x)); plot_ogl_y.append(plot_ogl_y[-1]) 
 
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(8, 4))
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
         ax.plot(prop_x, prop_y, marker='s', color='blue', label='Proposed Profile', linewidth=2)
         ax.plot([0], [frl_v], marker='*', color='red', markersize=10, label=f'FRL ({frl_v}m)')
