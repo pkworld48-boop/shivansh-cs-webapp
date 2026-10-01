@@ -5,7 +5,7 @@ from shapely.geometry import LineString, Polygon
 import io
 import zipfile
 
-st.set_page_config(page_title="Shiv Ansh Infra - Studio", layout="wide")
+st.set_page_config(page_title="Shiv Ansh Infra Earthwork CS Engine", layout="wide")
 
 hide_st_style = """
             <style>
@@ -19,8 +19,8 @@ st.markdown(hide_st_style, unsafe_allow_html=True)
 if 'ogl_df' not in st.session_state: st.session_state.ogl_df = pd.DataFrame()
 if 'frl_dict' not in st.session_state: st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra - Multi-Chainage C/S & L-Section Studio")
-st.markdown("**Cloud Edition:** Live Editing | Vertical Tables | AutoCAD Hatching | Trapezoidal Volumes")
+st.title("Shiv Ansh Infra Earthwork CS Engine")
+st.markdown("**Cloud CS:** Live Preview | Trapezoidal Volumes")
 
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
     if slope_ratio == 0:
@@ -73,13 +73,13 @@ st.sidebar.header("⚙️ Parameters")
 title_prefix = st.sidebar.text_input("Plot Title Prefix", "Cross Section at CH: ")
 camber_val = st.sidebar.number_input("Camber (%)", value=2.5, format="%.2f")
 
-col1, col2 = st.sidebar.columns(2)
-with col1:
+col1_side, col2_side = st.sidebar.columns(2)
+with col1_side:
     st.markdown("**LEFT SIDE**")
     l_width = abs(st.number_input("L-Width", value=10.0))
     l_slope = st.number_input("L-Slope (H:1)", value=2.0)
     max_l_toe = -abs(st.number_input("Max L-Toe", value=30.0))
-with col2:
+with col2_side:
     st.markdown("**RIGHT SIDE**")
     r_width = abs(st.number_input("R-Width", value=10.0))
     r_slope = st.number_input("R-Slope (H:1)", value=2.0)
@@ -96,7 +96,8 @@ if not st.session_state.ogl_df.empty:
     else:
         st.error("FRL Data Missing for this Chainage!")
 
-    tab1, tab2, tab3 = st.tabs(["📈 C/S Preview", "📈 L-Section Preview", "✏️️ Live Data Editor & Export"])
+    # यहाँ हमने 3 कॉलम्स बनाए हैं
+    col1, col2, col3 = st.columns(3) 
 
     def draw_cs(current_ch):
         ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == current_ch].copy()
@@ -178,7 +179,8 @@ if not st.session_state.ogl_df.empty:
         ax.set_ylim(y_min - (y_max - y_min)*0.05, y_max + (y_max - y_min) * 0.55)
         return fig
 
-    with tab1:
+    # ------------------ COLUMN 1: C/S Preview ------------------
+    with col1:
         st.subheader("Cross Section Preview")
         if frl_val is not None:
             fig_cs = draw_cs(ch_sel)
@@ -188,8 +190,8 @@ if not st.session_state.ogl_df.empty:
                 fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
                 st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf")
 
-    # ------------------ L-SECTION ------------------
-    with tab2:
+    # ------------------ COLUMN 2: L-SECTION ------------------
+    with col2:
         st.subheader("L-Section Profile")
         if st.session_state.frl_dict:
             ch_list = []
@@ -228,7 +230,7 @@ if not st.session_state.ogl_df.empty:
                 for (row, col), cell in t_table.get_celld().items():
                     if col >= 0: cell.get_text().set_rotation(90) 
 
-                ax_l.set_title("Longitudinal Section (L-Section) Profile", fontweight='bold')
+                ax_l.set_title("Longitudinal Section (L-Section)", fontweight='bold')
                 ax_l.set_ylabel("Elevation (m)")
                 ax_l.grid(True, linestyle=':', alpha=0.7)
                 ax_l.legend(loc="upper right")
@@ -245,10 +247,10 @@ if not st.session_state.ogl_df.empty:
                 fig_l.savefig(buf_l, format="pdf", bbox_inches="tight")
                 st.download_button(label="🖨️ Download L-Section (PDF)", data=buf_l.getvalue(), file_name="L_Section.pdf", mime="application/pdf")
 
-    # ------------------ LIVE DATA EDITOR & BATCH EXPORT ------------------
-    with tab3:
-        st.subheader("✏️ Live OGL Data Editor")
-        st.info("Aap yahan seedhe kisi bhi cell par click karke value badal sakte hain. Graph turant update ho jayega!")
+    # ------------------ COLUMN 3: LIVE DATA EDITOR ------------------
+    with col3:
+        st.subheader("✏️ Live OGL Data")
+        st.info("Cell par click karke value badlein. Graph update ho jayega!")
 
         edited_df = st.data_editor(
             st.session_state.ogl_df,
