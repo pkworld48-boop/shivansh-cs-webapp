@@ -119,7 +119,7 @@ if not st.session_state.ogl_df.empty:
         if min(prop_x) < plot_ogl_x[0]: plot_ogl_x.insert(0, min(prop_x)); plot_ogl_y.insert(0, plot_ogl_y[0]) 
         if max(prop_x) > plot_ogl_x[-1]: plot_ogl_x.append(max(prop_x)); plot_ogl_y.append(plot_ogl_y[-1]) 
 
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(11, 7.8))
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
         ax.plot(prop_x, prop_y, marker='s', color='blue', label='Proposed Profile', linewidth=2)
         ax.plot([0], [frl_v], marker='*', color='red', markersize=10, label=f'FRL ({frl_v}m)')
@@ -154,7 +154,7 @@ if not st.session_state.ogl_df.empty:
             ax.fill_between(sorted_x, y_o, y_p, where=[p < o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='lightpink', edgecolor='red', alpha=0.4, hatch='\\\\\\', label='Cut Hatch')
         except: pass
 
-        fig.subplots_adjust(left=0.15, bottom=0.65, right=0.95, top=0.92)
+        fig.subplots_adjust(left=0.15, bottom=0.58, right=0.95, top=0.92)
         ax.set_xticks([])
         the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -1.1, 1, 0.9])
         the_table.auto_set_font_size(False)
