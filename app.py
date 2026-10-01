@@ -221,24 +221,34 @@ if not st.session_state.ogl_df.empty:
         return fig
 
     with tab1:
-        st.subheader("Cross Section Preview")
         if frl_val is not None:
             fig_cs = draw_cs(ch_sel)
             if fig_cs:
-                st.pyplot(fig_cs)
-                buf = io.BytesIO()
-                fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
-                st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf")
+                # यहाँ हमने स्क्रीन को दो हिस्सों में बाँटा है (70% ग्राफ के लिए, 30% टेबल के लिए)
+                col_graph, col_edit = st.columns([7, 3], gap="medium")
                 
-                # Editor now below the cross-section
-                st.subheader("✏️ Edit OGL Data for this Chainage")
-                current_ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == ch_sel].copy()
-                edited_ch_df = st.data_editor(current_ch_df, use_container_width=True, num_rows="dynamic", key=f"cs_data_editor_{ch_sel}")
+                with col_graph:
+                    st.subheader("Cross Section Preview")
+                    st.pyplot(fig_cs)
+                    buf = io.BytesIO()
+                    fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
+                    st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf", use_container_width=True)
                 
-                if not edited_ch_df.equals(current_ch_df):
-                    other_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] != ch_sel]
-                    st.session_state.ogl_df = pd.concat([other_df, edited_ch_df], ignore_index=True)
-                    st.rerun()
+                with col_edit:
+                    st.subheader("✏️ Edit OGL Data")
+                    st.info("डेटा बदलने के बाद नीचे 'Update Graph' बटन दबाएँ।")
+                    current_ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == ch_sel].copy()
+                    
+                    # फॉर्म लगाने से ऐप हैंग नहीं होगा
+                    with st.form(key=f"edit_form_{ch_sel}"):
+                        edited_ch_df = st.data_editor(current_ch_df, use_container_width=True, num_rows="dynamic", hide_index=True)
+                        submit_button = st.form_submit_button(label="🔄 Update Graph", use_container_width=True)
+                        
+                        if submit_button:
+                            if not edited_ch_df.equals(current_ch_df):
+                                other_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] != ch_sel]
+                                st.session_state.ogl_df = pd.concat([other_df, edited_ch_df], ignore_index=True)
+                                st.rerun()
 
     with tab2:
         st.subheader("L-Section Profile")
