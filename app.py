@@ -106,7 +106,6 @@ with col2:
 if not st.session_state.ogl_df.empty:
     chainages = st.session_state.ogl_df['Chainage'].unique()
     
-    # 3 Columns banaye hain taaki sab ek seedhi line me fit ho jaye
     col_sel, col_msg, col_btn = st.columns([2, 3, 5])
     with col_sel:
         ch_sel = st.selectbox("Select Chainage", chainages)
@@ -122,7 +121,6 @@ if not st.session_state.ogl_df.empty:
             
     with col_btn:
         st.write("") 
-        # Ye aapke wo Cross Section aur L-Section wale buttons hain
         view_mode = st.radio("View Mode", ["Cross Section", "L-Section"], horizontal=True, label_visibility="collapsed")
 
     def get_elev(line, target_x):
@@ -161,6 +159,12 @@ if not st.session_state.ogl_df.empty:
             plot_ogl_x.append(max(prop_x)); plot_ogl_y.append(plot_ogl_y[-1])
             
         fig, ax = plt.subplots(figsize=(11, 7.8))
+        
+        # NAYA BADLAAV: Margin badhayi aur Company Logo (Text) add kiya
+        fig.subplots_adjust(left=0.150, bottom=0.60, right=0.95, top=0.82) # Top margin 0.92 se 0.82 ki
+        fig.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
+        fig.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
+
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
         ax.plot(prop_x, prop_y, marker='s', color='blue', label='Proposed Profile', linewidth=2)
         
@@ -178,6 +182,7 @@ if not st.session_state.ogl_df.empty:
             ogl_poly = Polygon([prop_pts[0]] + [(x, y) for x, y in ogl_points if prop_pts[0][0] < x < prop_pts[-1][0]] + [prop_pts[-1], (prop_pts[-1][0], datum_y), (prop_pts[0][0], datum_y)])
             cut_area = ogl_poly.difference(prop_poly).area
             fill_area = prop_poly.difference(ogl_poly).area
+            # Box ko thoda sa right shift kiya taaki logo ke upar na chade
             ax.text(0.02, 0.95, f"Cut Area = {cut_area:.3f} sq.m\nFill Area = {fill_area:.3f} sq.m", transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
         except:
             pass
@@ -195,7 +200,6 @@ if not st.session_state.ogl_df.empty:
         except:
             pass
 
-        fig.subplots_adjust(left=0.150, bottom=0.60, right=0.95, top=0.92)
         ax.set_xticks([])
         the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -0.8, 1, 0.7])
         the_table.auto_set_font_size(False)
@@ -208,7 +212,8 @@ if not st.session_state.ogl_df.empty:
         fig.text(0.50, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
         fig.text(0.80, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
         
-        ax.set_title(f"{title_prefix} {current_ch}")
+        # NAYA BADLAAV: Title ko thoda niche khiskaya taaki logo aur title me gap rahe
+        ax.set_title(f"{title_prefix} {current_ch}", pad=15)
         ax.set_ylabel("Elevation (m)")
         ax.grid(True, linestyle=':', alpha=0.7)
         ax.legend(loc="upper right", framealpha=1.0)
@@ -259,11 +264,17 @@ if not st.session_state.ogl_df.empty:
                     frl_elevs.append(st.session_state.frl_dict[c_str])
             if chainages_num:
                 fig_l, ax_l = plt.subplots(figsize=(12, 6))
+                
+                # NAYA BADLAAV: L-Section me bhi margin aur Company Logo (Text) add kiya
+                fig_l.subplots_adjust(left=0.15, bottom=0.55, right=0.95, top=0.82)
+                fig_l.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
+                fig_l.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
+
                 ax_l.plot(chainages_num, ogl_elevs, marker='o', color='green', label='Center OGL')
                 ax_l.plot(chainages_num, frl_elevs, marker='s', color='red', label='Proposed FRL')
                 ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f >= o for f, o in zip(frl_elevs, ogl_elevs)], color='blue', alpha=0.15, label='Fill Area')
                 ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f < o for f, o in zip(frl_elevs, ogl_elevs)], color='red', alpha=0.15, label='Cut Area')
-                fig_l.subplots_adjust(left=0.15, bottom=0.55, right=0.95, top=0.90)
+                
                 ax_l.set_xticks([])
                 row_frl = [f"{v:.3f}" for v in frl_elevs]
                 row_ogl = [f"{v:.3f}" for v in ogl_elevs]
@@ -274,7 +285,9 @@ if not st.session_state.ogl_df.empty:
                 for (row, col), cell in t_table.get_celld().items():
                     if col >= 0:
                         cell.get_text().set_rotation(90)
-                ax_l.set_title("Longitudinal Section (L-Section)", fontweight='bold')
+                
+                # NAYA BADLAAV: Title me pad lagaya
+                ax_l.set_title("Longitudinal Section (L-Section)", fontweight='bold', pad=15)
                 ax_l.set_ylabel("Elevation (m)")
                 ax_l.grid(True, linestyle=':', alpha=0.7)
                 ax_l.legend(loc="upper right")
@@ -303,7 +316,7 @@ if not st.session_state.ogl_df.empty:
                             zf.writestr(f"CS_CH_{c}.pdf", b.getvalue())
                             plt.close(f)
             st.success("Batch Generated!")
-            st.download_button(label="⬇️ Download All PDFs (ZIP)", data=zip_buffer.getvalue(), file_name="All_Cross_Sections.zip", mime="application/zip")
+            st.download_button(label="⬇️️ Download All PDFs (ZIP)", data=zip_buffer.getvalue(), file_name="All_Cross_Sections.zip", mime="application/zip")
 
     if st.button("📊 Calculate Trapezoidal Earthwork Qty"):
         with st.spinner("Calculating volumes..."):
