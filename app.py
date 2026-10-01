@@ -6,18 +6,21 @@ import io
 import zipfile
 
 # ================= PAGE SETUP & CSS =================
-st.set_page_config(page_title="Shiv Ansh Infra Earthwork CS Engine", layout="wide")
+# NAYA BADLAAV: initial_sidebar_state="expanded" laga diya hai
+st.set_page_config(page_title="Shiv Ansh Infra Earthwork CS Engine", layout="wide", initial_sidebar_state="expanded")
 
-# CSS to remove extra top space and hide default elements
+# NAYA BADLAAV: Yahan se 'header {visibility: hidden;}' hata diya hai taaki teer (arrow) wapas aa jaye
 custom_css = """
 <style>
 #MainMenu {visibility: hidden;}
-header {visibility: hidden;}
 footer {visibility: hidden;}
 .block-container {
     padding-top: 1rem !important;
     padding-bottom: 1rem !important;
 }
+</style>
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
 </style>
 """
 st.markdown(custom_css, unsafe_allow_html=True)
