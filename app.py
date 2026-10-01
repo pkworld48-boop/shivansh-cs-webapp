@@ -175,7 +175,7 @@ if not st.session_state.ogl_df.empty:
         ax.legend(loc="upper right", framealpha=1.0)
         
         x_span = max(sorted_x) - min(sorted_x) if sorted_x else 20
-        ax.set_xlim(min(sorted_x) - x_span * 0.25, max(sorted_x) + x_span * 0.80) 
+        ax.set_xlim(min(sorted_x) - x_span * 0.25, max(sorted_x) + x_span * 0.40) 
         y_min, y_max = ax.get_ylim()
         ax.set_ylim(y_min - (y_max - y_min)*0.05, y_max + (y_max - y_min) * 0.55)
         return fig
