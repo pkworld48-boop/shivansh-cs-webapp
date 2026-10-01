@@ -7,7 +7,6 @@ import zipfile
 
 st.set_page_config(page_title="Shiv Ansh Infra - Studio", layout="wide")
 
-# Upar ka menu, GitHub icon aur footer hide karne ke liye
 hide_st_style = """
             <style>
             #MainMenu {visibility: hidden;}
@@ -17,7 +16,6 @@ hide_st_style = """
             """
 st.markdown(hide_st_style, unsafe_allow_html=True)
 
-# Session State for Data
 if 'ogl_df' not in st.session_state: st.session_state.ogl_df = pd.DataFrame()
 if 'frl_dict' not in st.session_state: st.session_state.frl_dict = {}
 
@@ -98,10 +96,8 @@ if not st.session_state.ogl_df.empty:
     else:
         st.error("FRL Data Missing for this Chainage!")
 
-    # TAB 3 KA NAAM CHANGE KIYA HAI: "Live Data Editor"
-    tab1, tab2, tab3 = st.tabs(["📈 C/S Preview", "📈 L-Section Preview", "✏️ Live Data Editor & Export"])
+    tab1, tab2, tab3 = st.tabs(["📈 C/S Preview", "📈 L-Section Preview", "✏️️ Live Data Editor & Export"])
 
-    # ------------------ CROSS SECTION ------------------
     def draw_cs(current_ch):
         ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == current_ch].copy()
         if ch_df.empty or current_ch not in st.session_state.frl_dict: return None
@@ -186,11 +182,11 @@ if not st.session_state.ogl_df.empty:
         st.subheader("Cross Section Preview")
         if frl_val is not None:
             fig_cs = draw_cs(ch_sel)
-            st.pyplot(fig_cs)
-            
-            buf = io.BytesIO()
-            fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
-            st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf")
+            if fig_cs:
+                st.pyplot(fig_cs)
+                buf = io.BytesIO()
+                fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
+                st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf")
 
     # ------------------ L-SECTION ------------------
     with tab2:
@@ -245,33 +241,29 @@ if not st.session_state.ogl_df.empty:
                 ax_l.set_xlim(min(chainages_num) - x_span * 0.05, max(chainages_num) + x_span * 0.25)
                 
                 st.pyplot(fig_l)
-                
                 buf_l = io.BytesIO()
                 fig_l.savefig(buf_l, format="pdf", bbox_inches="tight")
                 st.download_button(label="🖨️ Download L-Section (PDF)", data=buf_l.getvalue(), file_name="L_Section.pdf", mime="application/pdf")
 
-    # ------------------ NAYA: LIVE DATA EDITOR & BATCH EXPORT ------------------
+    # ------------------ LIVE DATA EDITOR & BATCH EXPORT ------------------
     with tab3:
         st.subheader("✏️ Live OGL Data Editor")
-        st.info("Aap yahan seedhe kisi bhi cell par click karke Elevation, Offset ya Chainage change kar sakte hain. Nayi row add karne ke liye sabse niche click karein. Change karte hi graph automatic update ho jayega!")
+        st.info("Aap yahan seedhe kisi bhi cell par click karke value badal sakte hain. Graph turant update ho jayega!")
 
-        # Yahan humne st.dataframe ki jagah st.data_editor laga diya hai
         edited_df = st.data_editor(
             st.session_state.ogl_df,
             use_container_width=True,
-            num_rows="dynamic", # Isse aap nai row add ya delete kar sakte hain
+            num_rows="dynamic",
             key="live_editor"
         )
         
-        # Agar user ne kuch edit kiya hai, toh usko save karke page refresh kar do
         if not edited_df.equals(st.session_state.ogl_df):
             st.session_state.ogl_df = edited_df
-            st.rerun() # Refresh karte hi naya graph ban jayega
+            st.rerun()
 
         st.markdown("---")
         st.subheader("📦 Advanced Exports")
         
-        # --- Batch PDF Export ---
         if st.button("📦 Generate Batch PDF (ZIP)"):
             with st.spinner("Generating all PDFs... Please wait..."):
                 zip_buffer = io.BytesIO()
@@ -287,7 +279,6 @@ if not st.session_state.ogl_df.empty:
                 st.success("Batch Generated!")
                 st.download_button(label="⬇️ Download All PDFs (ZIP)", data=zip_buffer.getvalue(), file_name="All_Cross_Sections.zip", mime="application/zip")
         
-        # --- QTY SHEET ---
         if st.button("📊 Calculate Trapezoidal Earthwork Qty"):
             with st.spinner("Calculating volumes..."):
                 ch_list = []
