@@ -6,10 +6,8 @@ import io
 import zipfile
 
 # ================= PAGE SETUP & CSS =================
-# NAYA BADLAAV: initial_sidebar_state="expanded" laga diya hai
 st.set_page_config(page_title="Shiv Ansh Infra Earthwork CS Engine", layout="wide", initial_sidebar_state="expanded")
 
-# NAYA BADLAAV: Yahan se 'header {visibility: hidden;}' hata diya hai taaki teer (arrow) wapas aa jaye
 custom_css = """
 <style>
 #MainMenu {visibility: hidden;}
@@ -20,7 +18,6 @@ footer {visibility: hidden;}
 }
 </style>
 """
-
 st.markdown(custom_css, unsafe_allow_html=True)
 
 if 'ogl_df' not in st.session_state:
@@ -109,21 +106,24 @@ with col2:
 if not st.session_state.ogl_df.empty:
     chainages = st.session_state.ogl_df['Chainage'].unique()
     
-    # Dropdown in a smaller column
-    col_sel, col_msg = st.columns([2, 10])
+    # 3 Columns banaye hain taaki sab ek seedhi line me fit ho jaye
+    col_sel, col_msg, col_btn = st.columns([2, 3, 5])
     with col_sel:
         ch_sel = st.selectbox("Select Chainage", chainages)
         
     frl_val = st.session_state.frl_dict.get(ch_sel, None)
     
     with col_msg:
-        st.write("") # For vertical alignment
+        st.write("") 
         if frl_val is not None:
             st.success(f"Active FRL: {frl_val} m")
         else:
             st.error("FRL Data Missing for this Chainage!")
-
-    tab1, tab2 = st.tabs(["Cross Section", "L-Section"])
+            
+    with col_btn:
+        st.write("") 
+        # Ye aapke wo Cross Section aur L-Section wale buttons hain
+        view_mode = st.radio("View Mode", ["Cross Section", "L-Section"], horizontal=True, label_visibility="collapsed")
 
     def get_elev(line, target_x):
         vert = LineString([(target_x, -1000), (target_x, 1000)])
@@ -164,7 +164,6 @@ if not st.session_state.ogl_df.empty:
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
         ax.plot(prop_x, prop_y, marker='s', color='blue', label='Proposed Profile', linewidth=2)
         
-        # FRL Point and Dotted Line up to OGL
         ax.plot([0], [frl_v], marker='*', color='red', markersize=10, label=f'FRL ({frl_v}m)')
         try:
             ogl_y_center = float(get_elev(ogl_line, 0))
@@ -221,7 +220,7 @@ if not st.session_state.ogl_df.empty:
         
         return fig
 
-    with tab1:
+    if view_mode == "Cross Section":
         st.subheader("Cross Section Preview")
         if frl_val is not None:
             fig_cs = draw_cs(ch_sel)
@@ -231,7 +230,6 @@ if not st.session_state.ogl_df.empty:
                 fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
                 st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf")
                 
-                # Editor now below the cross-section
                 st.subheader("✏️ Edit OGL Data for this Chainage")
                 current_ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == ch_sel].copy()
                 edited_ch_df = st.data_editor(current_ch_df, use_container_width=True, num_rows="dynamic", key=f"cs_data_editor_{ch_sel}")
@@ -241,7 +239,7 @@ if not st.session_state.ogl_df.empty:
                     st.session_state.ogl_df = pd.concat([other_df, edited_ch_df], ignore_index=True)
                     st.rerun()
 
-    with tab2:
+    elif view_mode == "L-Section":
         st.subheader("L-Section Profile")
         if st.session_state.frl_dict:
             ch_list = []
