@@ -20,9 +20,7 @@ footer {visibility: hidden;}
 }
 </style>
 """
-st.markdown(custom_css, unsafe_allow_html=True)
-</style>
-"""
+
 st.markdown(custom_css, unsafe_allow_html=True)
 
 if 'ogl_df' not in st.session_state:
