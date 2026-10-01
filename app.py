@@ -154,7 +154,7 @@ if not st.session_state.ogl_df.empty:
             ax.fill_between(sorted_x, y_o, y_p, where=[p < o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='lightpink', edgecolor='red', alpha=0.4, hatch='\\\\\\', label='Cut Hatch')
         except: pass
 
-        fig.subplots_adjust(left=0.15, bottom=0.55, right=0.95, top=0.92)
+        fig.subplots_adjust(left=0.15, bottom=0.15, right=0.95, top=0.92)
         ax.set_xticks([])
         the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -1.1, 1, 0.9])
         the_table.auto_set_font_size(False)
