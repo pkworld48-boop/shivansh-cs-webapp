@@ -125,8 +125,7 @@ if not st.session_state.ogl_df.empty:
         ax.plot([0], [frl_v], marker='*', color='red', markersize=10, label=f'FRL ({frl_v}m)')
         ogl_y = float(get_elev(ogl_line, 0))
         ax.vlines(x=0, ymin=ogl_y, ymax=frl_v, color='red', linestyle=':')
-
-                
+        
         cut_area, fill_area = 0.0, 0.0
         try:
             datum_y = min([y for x, y in ogl_points] + [y for x, y in prop_pts]) - 10
