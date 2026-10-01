@@ -28,7 +28,6 @@ if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
 st.title("Shiv Ansh Infra Earthwork CS Engine")
-st.markdown("**Cloud CS:** Live Preview | Trapezoidal Volumes")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
