@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator  # NAYA BADLAAV: 0.5m interval set karne ke liye
+from matplotlib.ticker import MultipleLocator
 from shapely.geometry import LineString, Polygon
 import io
 import zipfile
@@ -269,9 +269,11 @@ if not st.session_state.ogl_df.empty:
                     ogl_elevs.append(float(center_row['Elevation']))
                     frl_elevs.append(st.session_state.frl_dict[c_str])
             if chainages_num:
-                fig_l, ax_l = plt.subplots(figsize=(12, 6))
+                # NAYA BADLAAV: L-Section ki height 6.0 se badhakar 9.5 kar di
+                fig_l, ax_l = plt.subplots(figsize=(12, 9.5))
                 
-                fig_l.subplots_adjust(left=0.15, bottom=0.55, right=0.95, top=0.82)
+                # NAYA BADLAAV: Niche ki margin adjust ki taaki graph bada dikhe aur fail jaye
+                fig_l.subplots_adjust(left=0.15, bottom=0.45, right=0.95, top=0.82)
                 fig_l.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
                 fig_l.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
 
@@ -284,25 +286,32 @@ if not st.session_state.ogl_df.empty:
                 row_frl = [f"{v:.3f}" for v in frl_elevs]
                 row_ogl = [f"{v:.3f}" for v in ogl_elevs]
                 row_ch = [f"{v:g}" for v in chainages_num]
-                t_table = ax_l.table(cellText=[row_frl, row_ogl, row_ch], rowLabels=["Proposed FRL (m)", "Center OGL (m)", "Chainage (m)"], loc='bottom', bbox=[0, -1.1, 1, 0.9])
+                
+                # Table ki layout thodi fix ki hai height ke hisaab se
+                t_table = ax_l.table(cellText=[row_frl, row_ogl, row_ch], rowLabels=["Proposed FRL (m)", "Center OGL (m)", "Chainage (m)"], loc='bottom', bbox=[0, -0.7, 1, 0.6])
                 t_table.auto_set_font_size(False)
                 t_table.set_fontsize(8)
                 for (row, col), cell in t_table.get_celld().items():
                     if col >= 0:
                         cell.get_text().set_rotation(90)
                 
-                # NAYA BADLAAV: Y-axis ko 0.5m grid interval par set kiya gaya hai
                 ax_l.set_title("Longitudinal Section (L-Section)", fontweight='bold', pad=15)
                 ax_l.set_ylabel("Elevation (m)")
-                ax_l.yaxis.set_major_locator(MultipleLocator(0.5))  # Ye line apka kaam karegi
+                
+                ax_l.yaxis.set_major_locator(MultipleLocator(0.5))  
+                # NAYA BADLAAV: Y-axis ke font ko thoda chota kiya taaki mix na ho
+                ax_l.tick_params(axis='y', labelsize=8) 
+                
                 ax_l.grid(True, linestyle=':', alpha=0.7)
                 ax_l.legend(loc="upper right")
                 
                 true_y_min = min(ogl_elevs + frl_elevs)
                 true_y_max = max(ogl_elevs + frl_elevs)
-                ax_l.set_ylim(true_y_min - 3, true_y_max + 5)
+                # NAYA BADLAAV: Top aur Bottom padding kam ki taaki extra gap graph ko stretch kare
+                ax_l.set_ylim(true_y_min - 2, true_y_max + 3) 
                 x_span = max(chainages_num) - min(chainages_num) if chainages_num else 100
                 ax_l.set_xlim(min(chainages_num) - x_span * 0.05, max(chainages_num) + x_span * 0.25)
+                
                 st.pyplot(fig_l)
                 buf_l = io.BytesIO()
                 fig_l.savefig(buf_l, format="pdf", bbox_inches="tight")
