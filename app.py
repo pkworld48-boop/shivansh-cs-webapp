@@ -210,7 +210,7 @@ if not st.session_state.ogl_df.empty:
 
         ax.set_xticks([])
         # NAYA BADLAAV: Table ki height badhayi (height ko 0.9 set kiya)
-        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -.51, 1, 0.53])
+        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -.53, 1, 0.53])
         the_table.auto_set_font_size(False)
         # NAYA BADLAAV: Font size thoda chota kiya taaki text dabbe ke andar hi rahe
         the_table.set_fontsize(8)
