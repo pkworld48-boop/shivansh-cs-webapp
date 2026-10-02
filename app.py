@@ -169,7 +169,8 @@ if not st.session_state.ogl_df.empty:
             
         fig, ax = plt.subplots(figsize=(11, 7.8))
         
-        fig.subplots_adjust(left=0.150, bottom=0.60, right=0.95, top=0.82) 
+        # NAYA BADLAAV: Niche ki margin badhayi (bottom=0.45) taaki table fail sake
+        fig.subplots_adjust(left=0.150, bottom=0.45, right=0.95, top=0.82) 
         fig.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
         fig.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
 
@@ -208,9 +209,11 @@ if not st.session_state.ogl_df.empty:
             pass
 
         ax.set_xticks([])
-        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -0.8, 1.2, 0.7])
+        # NAYA BADLAAV: Table ki height badhayi (height ko 0.9 set kiya)
+        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -1.0, 1, 0.9])
         the_table.auto_set_font_size(False)
-        the_table.set_fontsize(9)
+        # NAYA BADLAAV: Font size thoda chota kiya taaki text dabbe ke andar hi rahe
+        the_table.set_fontsize(8)
         for (row, col), cell in the_table.get_celld().items():
             if col >= 0:
                 cell.get_text().set_rotation(90)
@@ -269,10 +272,8 @@ if not st.session_state.ogl_df.empty:
                     ogl_elevs.append(float(center_row['Elevation']))
                     frl_elevs.append(st.session_state.frl_dict[c_str])
             if chainages_num:
-                # NAYA BADLAAV: L-Section ki height 6.0 se badhakar 9.5 kar di
                 fig_l, ax_l = plt.subplots(figsize=(12, 9.5))
                 
-                # NAYA BADLAAV: Niche ki margin adjust ki taaki graph bada dikhe aur fail jaye
                 fig_l.subplots_adjust(left=0.15, bottom=0.45, right=0.95, top=0.82)
                 fig_l.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
                 fig_l.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
@@ -287,7 +288,6 @@ if not st.session_state.ogl_df.empty:
                 row_ogl = [f"{v:.3f}" for v in ogl_elevs]
                 row_ch = [f"{v:g}" for v in chainages_num]
                 
-                # Table ki layout thodi fix ki hai height ke hisaab se
                 t_table = ax_l.table(cellText=[row_frl, row_ogl, row_ch], rowLabels=["Proposed FRL (m)", "Center OGL (m)", "Chainage (m)"], loc='bottom', bbox=[0, -0.7, 1, 0.6])
                 t_table.auto_set_font_size(False)
                 t_table.set_fontsize(8)
@@ -299,7 +299,6 @@ if not st.session_state.ogl_df.empty:
                 ax_l.set_ylabel("Elevation (m)")
                 
                 ax_l.yaxis.set_major_locator(MultipleLocator(0.5))  
-                # NAYA BADLAAV: Y-axis ke font ko thoda chota kiya taaki mix na ho
                 ax_l.tick_params(axis='y', labelsize=8) 
                 
                 ax_l.grid(True, linestyle=':', alpha=0.7)
@@ -307,7 +306,6 @@ if not st.session_state.ogl_df.empty:
                 
                 true_y_min = min(ogl_elevs + frl_elevs)
                 true_y_max = max(ogl_elevs + frl_elevs)
-                # NAYA BADLAAV: Top aur Bottom padding kam ki taaki extra gap graph ko stretch kare
                 ax_l.set_ylim(true_y_min - 2, true_y_max + 3) 
                 x_span = max(chainages_num) - min(chainages_num) if chainages_num else 100
                 ax_l.set_xlim(min(chainages_num) - x_span * 0.05, max(chainages_num) + x_span * 0.25)
