@@ -208,7 +208,7 @@ if not st.session_state.ogl_df.empty:
             pass
 
         ax.set_xticks([])
-        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -0.8, 1, 0.7])
+        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -0.8, 1.2, 0.7])
         the_table.auto_set_font_size(False)
         the_table.set_fontsize(9)
         for (row, col), cell in the_table.get_celld().items():
