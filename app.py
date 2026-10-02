@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator  # NAYA BADLAAV: 0.5m interval set karne ke liye
 from shapely.geometry import LineString, Polygon
 import io
 import zipfile
@@ -127,7 +128,15 @@ if not st.session_state.ogl_df.empty:
         vert = LineString([(target_x, -1000), (target_x, 1000)])
         inter = line.intersection(vert)
         if not inter.is_empty:
-            return f"{inter.y:.3f}" if inter.geom_type == 'Point' else f"{inter.geoms[0].y:.3f}"
+            if inter.geom_type == 'Point':
+                return f"{inter.y:.3f}"
+            elif inter.geom_type == 'MultiPoint':
+                return f"{inter.geoms[0].y:.3f}"
+            elif inter.geom_type == 'LineString':
+                return f"{list(inter.coords)[0][1]:.3f}"
+            else:
+                return f"{inter.bounds[1]:.3f}"
+                
         min_x, min_y, max_x, max_y = line.bounds
         if abs(target_x - min_x) <= 0.005:
             return f"{next((p[1] for p in line.coords if p[0] == min_x), line.coords[0][1]):.3f}"
@@ -160,8 +169,7 @@ if not st.session_state.ogl_df.empty:
             
         fig, ax = plt.subplots(figsize=(11, 7.8))
         
-        # NAYA BADLAAV: Margin badhayi aur Company Logo (Text) add kiya
-        fig.subplots_adjust(left=0.150, bottom=0.60, right=0.95, top=0.82) # Top margin 0.92 se 0.82 ki
+        fig.subplots_adjust(left=0.150, bottom=0.60, right=0.95, top=0.82) 
         fig.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
         fig.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
 
@@ -182,7 +190,6 @@ if not st.session_state.ogl_df.empty:
             ogl_poly = Polygon([prop_pts[0]] + [(x, y) for x, y in ogl_points if prop_pts[0][0] < x < prop_pts[-1][0]] + [prop_pts[-1], (prop_pts[-1][0], datum_y), (prop_pts[0][0], datum_y)])
             cut_area = ogl_poly.difference(prop_poly).area
             fill_area = prop_poly.difference(ogl_poly).area
-            # Box ko thoda sa right shift kiya taaki logo ke upar na chade
             ax.text(0.02, 0.95, f"Cut Area = {cut_area:.3f} sq.m\nFill Area = {fill_area:.3f} sq.m", transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
         except:
             pass
@@ -201,7 +208,7 @@ if not st.session_state.ogl_df.empty:
             pass
 
         ax.set_xticks([])
-        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -1.1, 1, 1.05])
+        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -0.8, 1, 0.7])
         the_table.auto_set_font_size(False)
         the_table.set_fontsize(9)
         for (row, col), cell in the_table.get_celld().items():
@@ -212,7 +219,6 @@ if not st.session_state.ogl_df.empty:
         fig.text(0.50, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
         fig.text(0.80, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
         
-        # NAYA BADLAAV: Title ko thoda niche khiskaya taaki logo aur title me gap rahe
         ax.set_title(f"{title_prefix} {current_ch}", pad=15)
         ax.set_ylabel("Elevation (m)")
         ax.grid(True, linestyle=':', alpha=0.7)
@@ -265,7 +271,6 @@ if not st.session_state.ogl_df.empty:
             if chainages_num:
                 fig_l, ax_l = plt.subplots(figsize=(12, 6))
                 
-                # NAYA BADLAAV: L-Section me bhi margin aur Company Logo (Text) add kiya
                 fig_l.subplots_adjust(left=0.15, bottom=0.55, right=0.95, top=0.82)
                 fig_l.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
                 fig_l.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
@@ -286,11 +291,13 @@ if not st.session_state.ogl_df.empty:
                     if col >= 0:
                         cell.get_text().set_rotation(90)
                 
-                # NAYA BADLAAV: Title me pad lagaya
+                # NAYA BADLAAV: Y-axis ko 0.5m grid interval par set kiya gaya hai
                 ax_l.set_title("Longitudinal Section (L-Section)", fontweight='bold', pad=15)
                 ax_l.set_ylabel("Elevation (m)")
+                ax_l.yaxis.set_major_locator(MultipleLocator(0.5))  # Ye line apka kaam karegi
                 ax_l.grid(True, linestyle=':', alpha=0.7)
                 ax_l.legend(loc="upper right")
+                
                 true_y_min = min(ogl_elevs + frl_elevs)
                 true_y_max = max(ogl_elevs + frl_elevs)
                 ax_l.set_ylim(true_y_min - 3, true_y_max + 5)
@@ -316,7 +323,7 @@ if not st.session_state.ogl_df.empty:
                             zf.writestr(f"CS_CH_{c}.pdf", b.getvalue())
                             plt.close(f)
             st.success("Batch Generated!")
-            st.download_button(label="⬇️️ Download All PDFs (ZIP)", data=zip_buffer.getvalue(), file_name="All_Cross_Sections.zip", mime="application/zip")
+            st.download_button(label="⬇ Download All PDFs (ZIP)", data=zip_buffer.getvalue(), file_name="All_Cross_Sections.zip", mime="application/zip")
 
     if st.button("📊 Calculate Trapezoidal Earthwork Qty"):
         with st.spinner("Calculating volumes..."):
