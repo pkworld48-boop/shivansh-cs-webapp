@@ -13,6 +13,12 @@ custom_css = """
 <style>
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
+
+/* NAYA BADLAAV: Ye 2 lines GitHub icon aur Fork button ko chhipayengi */
+[data-testid="stToolbar"] {visibility: hidden !important;}
+[data-testid="stHeaderActionElements"] {visibility: hidden !important;}
+.viewerBadge_container {display: none !important;}
+
 .block-container {
     padding-top: 1rem !important;
     padding-bottom: 1rem !important;
