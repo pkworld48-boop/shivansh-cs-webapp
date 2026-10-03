@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.4)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.5)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -246,23 +246,23 @@ if not st.session_state.ogl_df.empty:
             plot_ogl_x.append(max(prop_x)); plot_ogl_y.append(plot_ogl_y[-1])
             
         fig, ax = plt.subplots(figsize=(11, 7.8))
-        fig.subplots_adjust(left=0.150, bottom=0.55, right=0.95, top=0.82) 
+        
+        # NAYA BADLAAV: Legend ko bahar rakhne ke liye right margin 0.95 se hata kar 0.75 kar diya
+        fig.subplots_adjust(left=0.150, bottom=0.55, right=0.75, top=0.82) 
+        
         fig.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
         fig.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
 
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
         ax.plot(prop_x, prop_y, marker='s', color='blue', label='Earthwork / Formation Line', linewidth=2, linestyle='--' if include_crust else '-')
         
-        # NAYA BADLAAV: Paved (Navy) line ab sirf Carriageway par banegi.
         if include_crust:
             ax.plot([l_cw_x, 0, r_cw_x], [l_cw_y, frl_v, r_cw_y], color='navy', linewidth=2.5, label='Paved Top Surface')
-            # Earthen Shoulder ke top ke liye simple bhuri (brown) line
             if l_sh_x < l_cw_x:
                 ax.plot([l_sh_x, l_cw_x], [l_sh_y, l_cw_y], color='saddlebrown', linewidth=1.5)
             if r_sh_x > r_cw_x:
                 ax.plot([r_cw_x, r_sh_x], [r_cw_y, r_sh_y], color='saddlebrown', linewidth=1.5)
         else:
-            # Agar crust nahi hai toh poori chaurai ek single line jaisi pehle thi.
             ax.plot([l_sh_x, l_cw_x, 0, r_cw_x, r_sh_x], [l_sh_y, l_cw_y, frl_v, r_cw_y, r_sh_y], color='navy', linewidth=2.5, label='Top Surface')
             
         ax.plot([0], [frl_v], marker='*', color='red', markersize=10, label=f'FRL ({frl_v}m)')
@@ -272,7 +272,6 @@ if not st.session_state.ogl_df.empty:
             y_curr_c, y_curr_l, y_curr_r = frl_v, l_cw_y, r_cw_y
             x_curr_l, x_curr_r = l_cw_x, r_cw_x
             
-            # NAYA BADLAAV: Subgrade ka alpha 0.3 aur hatch 'xx' kar diya hai (Light & Normal look)
             layers = [
                 ('BC', crust_thk['bc']/1000.0, 'black', 0.8, ''),
                 ('DBM', crust_thk['dbm']/1000.0, 'dimgray', 0.9, ''),
@@ -296,10 +295,10 @@ if not st.session_state.ogl_df.empty:
                     y_curr_c, y_curr_l, y_curr_r = y_next_c, y_next_l, y_next_r
                     x_curr_l, x_curr_r = x_next_l, x_next_r
                     
-                    patch = mpatches.Patch(facecolor=col, alpha=alp, hatch=htc, edgecolor='black', label=f"{name} Layer")
+                    # NAYA BADLAAV: Legend me layer ki thickness add kar di gayi hai
+                    patch = mpatches.Patch(facecolor=col, alpha=alp, hatch=htc, edgecolor='black', label=f"{name} Layer ({thk*1000:g}mm)")
                     layers_legend_handles.append(patch)
             
-            # NAYA BADLAAV: Earthen Shoulder ko bhi halka (alpha=0.3, hatch='xx') kiya gaya hai Subgrade jaisa
             if outer_l_x < x_curr_l:
                 poly_left_sh_x = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
                 poly_left_sh_y = [l_sh_y, l_cw_y, outer_l_y, outer_l_y]
@@ -378,8 +377,9 @@ if not st.session_state.ogl_df.empty:
             for patch in layers_legend_handles:
                 handles.append(patch)
                 labels.append(patch.get_label())
-                    
-        ax.legend(handles, labels, loc="upper right", framealpha=1.0, fontsize=8)
+        
+        # NAYA BADLAAV: Legend ko graph ke ekdum bahar rakh diya (bbox_to_anchor ka istemaal)
+        ax.legend(handles, labels, loc="upper left", bbox_to_anchor=(1.02, 1), framealpha=1.0, fontsize=8)
         
         x_span = max(sorted_x) - min(sorted_x) if sorted_x else 20
         ax.set_xlim(min(sorted_x) - x_span * 0.05, max(sorted_x) + x_span * 0.20)
@@ -419,7 +419,9 @@ if not st.session_state.ogl_df.empty:
             if chainages_num:
                 fig_l, ax_l = plt.subplots(figsize=(12, 9.5))
                 
-                fig_l.subplots_adjust(left=0.15, bottom=0.55, right=0.95, top=0.82)
+                # NAYA BADLAAV: L-Section me bhi legend ko jagah dene ke liye right margin 0.75 kiya
+                fig_l.subplots_adjust(left=0.15, bottom=0.55, right=0.75, top=0.82)
+                
                 fig_l.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
                 fig_l.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
 
@@ -447,7 +449,9 @@ if not st.session_state.ogl_df.empty:
                 ax_l.tick_params(axis='y', labelsize=8) 
                 
                 ax_l.grid(True, linestyle=':', alpha=0.7)
-                ax_l.legend(loc="upper right")
+                
+                # NAYA BADLAAV: L-Section ka legend bhi bahar nikal diya gaya hai
+                ax_l.legend(loc="upper left", bbox_to_anchor=(1.02, 1), framealpha=1.0, fontsize=8)
                 
                 true_y_min = min(ogl_elevs + frl_elevs)
                 true_y_max = max(ogl_elevs + frl_elevs)
