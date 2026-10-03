@@ -8,18 +8,15 @@ import io
 import zipfile
 
 # ================= PAGE SETUP & CSS =================
-st.set_page_config(page_title="Shiv Ansh Infra Earthwork CS Engine Pro", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Shiv Ansh Infra CS Engine (Pro)", layout="wide", initial_sidebar_state="expanded")
 
 custom_css = """
 <style>
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-
-/* GitHub Icon aur Fork button chhipane ke liye */
 [data-testid="stToolbar"] {visibility: hidden !important;}
 [data-testid="stHeaderActionElements"] {visibility: hidden !important;}
 .viewerBadge_container {display: none !important;}
-
 .block-container {
     padding-top: 1rem !important;
     padding-bottom: 1rem !important;
@@ -33,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V2.0)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V3.0)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -97,7 +94,6 @@ if frl_file:
 st.sidebar.header("⚙️ Parameters")
 title_prefix = st.sidebar.text_input("Plot Title Prefix", "Cross Section at CH: ")
 
-# NAYA BADLAAV: Alag-alag Camber (%)
 st.sidebar.markdown("**Camber / Cross-Fall**")
 cam_col1, cam_col2 = st.sidebar.columns(2)
 with cam_col1:
@@ -105,12 +101,13 @@ with cam_col1:
 with cam_col2:
     r_camber = st.number_input("Right Camber (%)", value=2.5, format="%.2f")
 
-# NAYA BADLAAV: Crust Layers Toggle
 st.sidebar.markdown("**Pavement Crust Layers**")
 include_crust = st.sidebar.checkbox("☑ Include Crust Layers")
 crust_thk = {'bc': 0.0, 'dbm': 0.0, 'wmm': 0.0, 'gsb': 0.0, 'subgrade': 0.0}
+crust_slope = 0.0
 
 if include_crust:
+    crust_slope = st.sidebar.number_input("Crust Side Slope (H:1)", value=1.0, format="%.2f")
     cr_c1, cr_c2 = st.sidebar.columns(2)
     with cr_c1:
         crust_thk['bc'] = st.number_input("BC (mm)", value=40.0)
@@ -120,17 +117,19 @@ if include_crust:
         crust_thk['dbm'] = st.number_input("DBM (mm)", value=50.0)
         crust_thk['gsb'] = st.number_input("GSB (mm)", value=200.0)
 
-st.sidebar.markdown("**Toe & Slope Parameters**")
+st.sidebar.markdown("**Carriageway & Shoulders**")
 col1, col2 = st.sidebar.columns(2)
 with col1:
     st.markdown("**LEFT SIDE**")
-    l_width = abs(st.number_input("L-Width", value=10.0))
-    l_slope = st.number_input("L-Slope (H:1)", value=2.0)
+    l_cw = abs(st.number_input("L-Carriageway", value=3.75))
+    l_sh = abs(st.number_input("L-Shoulder", value=1.50))
+    l_slope = st.number_input("L-Toe Slope (H:1)", value=2.0)
     max_l_toe = -abs(st.number_input("Max L-Toe", value=30.0))
 with col2:
     st.markdown("**RIGHT SIDE**")
-    r_width = abs(st.number_input("R-Width", value=10.0))
-    r_slope = st.number_input("R-Slope (H:1)", value=2.0)
+    r_cw = abs(st.number_input("R-Carriageway", value=3.75))
+    r_sh = abs(st.number_input("R-Shoulder", value=1.50))
+    r_slope = st.number_input("R-Toe Slope (H:1)", value=2.0)
     max_r_toe = abs(st.number_input("Max R-Toe", value=30.0))
 
 # ================= MAIN AREA =================
@@ -174,32 +173,61 @@ if not st.session_state.ogl_df.empty:
             return f"{next((p[1] for p in line.coords if p[0] == max_x), line.coords[-1][1]):.3f}"
         return "-"
 
+    def get_geometry(ogl_line, frl_v):
+        # 1. Top Surface Coordinates
+        l_cw_x = -l_cw
+        l_cw_y = frl_v - l_cw * (l_camber / 100.0)
+        r_cw_x = r_cw
+        r_cw_y = frl_v - r_cw * (r_camber / 100.0)
+        
+        l_sh_x = -(l_cw + l_sh)
+        l_sh_y = frl_v - (l_cw + l_sh) * (l_camber / 100.0)
+        r_sh_x = (r_cw + r_sh)
+        r_sh_y = frl_v - (r_cw + r_sh) * (r_camber / 100.0)
+        
+        total_crust_m = sum(crust_thk.values()) / 1000.0 if include_crust else 0.0
+        
+        # 2. Formation Line & Core Points
+        if include_crust:
+            l_crust_bot_x = l_cw_x - total_crust_m * crust_slope
+            l_crust_bot_y = l_cw_y - total_crust_m
+            r_crust_bot_x = r_cw_x + total_crust_m * crust_slope
+            r_crust_bot_y = r_cw_y - total_crust_m
+            c_crust_bot_y = frl_v - total_crust_m
+            
+            core_pts = []
+            if l_sh_x < l_crust_bot_x: core_pts.append((l_sh_x, l_sh_y))
+            core_pts.append((l_crust_bot_x, l_crust_bot_y))
+            core_pts.append((0, c_crust_bot_y))
+            core_pts.append((r_crust_bot_x, r_crust_bot_y))
+            if r_sh_x > r_crust_bot_x: core_pts.append((r_sh_x, r_sh_y))
+            
+            outer_l_x = min(l_sh_x, l_crust_bot_x)
+            outer_l_y = l_sh_y if outer_l_x == l_sh_x else l_crust_bot_y
+            outer_r_x = max(r_sh_x, r_crust_bot_x)
+            outer_r_y = r_sh_y if outer_r_x == r_sh_x else r_crust_bot_y
+        else:
+            core_pts = [(l_sh_x, l_sh_y), (0, frl_v), (r_sh_x, r_sh_y)]
+            outer_l_x, outer_l_y = l_sh_x, l_sh_y
+            outer_r_x, outer_r_y = r_sh_x, r_sh_y
+
+        # 3. Add Toe Points
+        prop_pts = calculate_toe_points(ogl_line, outer_l_x, outer_l_y, l_slope, True, max_l_toe) + \
+                   core_pts + \
+                   calculate_toe_points(ogl_line, outer_r_x, outer_r_y, r_slope, False, max_r_toe)
+                   
+        return prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y
+
     def draw_cs(current_ch):
         ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == current_ch].copy()
         if ch_df.empty or current_ch not in st.session_state.frl_dict:
             return None
-        
+            
         frl_v = st.session_state.frl_dict[current_ch]
         ogl_points = sorted(list(zip(ch_df['Offset'].tolist(), ch_df['Elevation'].tolist())), key=lambda pt: pt[0])
         ogl_line = LineString([(-500, ogl_points[0][1])] + ogl_points + [(500, ogl_points[-1][1])])
         
-        # Alag-alag camber calculation
-        l_edge_y = frl_v - (l_width * (l_camber / 100.0))
-        r_edge_y = frl_v - (r_width * (r_camber / 100.0))
-        
-        # Crust calculation
-        total_crust_m = 0.0
-        if include_crust:
-            total_crust_m = sum(crust_thk.values()) / 1000.0
-            
-        form_center_y = frl_v - total_crust_m
-        form_l_edge_y = l_edge_y - total_crust_m
-        form_r_edge_y = r_edge_y - total_crust_m
-        
-        # Toe Points hamesha Formation Level (Subgrade Bottom) se nikalenge
-        prop_pts = calculate_toe_points(ogl_line, -l_width, form_l_edge_y, l_slope, True, max_l_toe) + \
-                   [(-l_width, form_l_edge_y), (0, form_center_y), (r_width, form_r_edge_y)] + \
-                   calculate_toe_points(ogl_line, r_width, form_r_edge_y, r_slope, False, max_r_toe)
+        prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y = get_geometry(ogl_line, frl_v)
         
         prop_x, prop_y = [p[0] for p in prop_pts], [p[1] for p in prop_pts]
         prop_line = LineString(prop_pts)
@@ -217,25 +245,24 @@ if not st.session_state.ogl_df.empty:
 
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
         
-        # Agar Crust hai toh Formation Line ko dash karein, nahi toh solid
-        fmt_label = 'Formation / Earthwork Profile' if include_crust else 'Proposed Profile'
-        ax.plot(prop_x, prop_y, marker='s', color='blue', label=fmt_label, linewidth=2, linestyle='--' if include_crust else '-')
+        # Earthwork Formation Boundary
+        ax.plot(prop_x, prop_y, marker='s', color='blue', label='Earthwork / Formation Line', linewidth=2, linestyle='--' if include_crust else '-')
+        
+        # Top Surface Line (Navy)
+        ax.plot([l_sh_x, l_cw_x, 0, r_cw_x, r_sh_x], [l_sh_y, l_cw_y, frl_v, r_cw_y, r_sh_y], color='navy', linewidth=2.5, label='Top Surface')
         ax.plot([0], [frl_v], marker='*', color='red', markersize=10, label=f'FRL ({frl_v}m)')
 
-        # NAYA BADLAAV: Drawing Crust Layers
-        if include_crust and total_crust_m > 0:
-            ax.plot([-l_width, 0, r_width], [l_edge_y, frl_v, r_edge_y], color='navy', linewidth=2, label='FRL Top Surface')
-            ax.plot([-l_width, -l_width], [l_edge_y, form_l_edge_y], color='black', linewidth=1.5)
-            ax.plot([r_width, r_width], [r_edge_y, form_r_edge_y], color='black', linewidth=1.5)
-            
-            y_curr_c, y_curr_l, y_curr_r = frl_v, l_edge_y, r_edge_y
+        # Drawing Trapezoidal Crust Layers & Earthen Shoulder
+        if include_crust and sum(crust_thk.values()) > 0:
+            y_curr_c, y_curr_l, y_curr_r = frl_v, l_cw_y, r_cw_y
+            x_curr_l, x_curr_r = l_cw_x, r_cw_x
             
             layers = [
-                ('BC', crust_thk['bc']/1000.0, 'black', 0.7, ''),
-                ('DBM', crust_thk['dbm']/1000.0, 'dimgray', 0.8, ''),
+                ('BC', crust_thk['bc']/1000.0, 'black', 0.8, ''),
+                ('DBM', crust_thk['dbm']/1000.0, 'dimgray', 0.9, ''),
                 ('WMM', crust_thk['wmm']/1000.0, 'orange', 0.6, '...'),
                 ('GSB', crust_thk['gsb']/1000.0, 'gold', 0.5, 'oo'),
-                ('Subgrade', crust_thk['subgrade']/1000.0, 'saddlebrown', 0.5, 'xxx')
+                ('Subgrade', crust_thk['subgrade']/1000.0, 'saddlebrown', 0.6, 'xxx')
             ]
             
             for name, thk, col, alp, htc in layers:
@@ -243,11 +270,19 @@ if not st.session_state.ogl_df.empty:
                     y_next_c = y_curr_c - thk
                     y_next_l = y_curr_l - thk
                     y_next_r = y_curr_r - thk
+                    x_next_l = x_curr_l - thk * crust_slope
+                    x_next_r = x_curr_r + thk * crust_slope
                     
-                    poly_x = [-l_width, 0, r_width, r_width, 0, -l_width]
+                    poly_x = [x_curr_l, 0, x_curr_r, x_next_r, 0, x_next_l]
                     poly_y = [y_curr_l, y_curr_c, y_curr_r, y_next_r, y_next_c, y_next_l]
-                    ax.fill(poly_x, poly_y, color=col, alpha=alp, hatch=htc, edgecolor='black')
+                    ax.fill(poly_x, poly_y, color=col, alpha=alp, hatch=htc, edgecolor='black', linewidth=0.5)
+                    
                     y_curr_c, y_curr_l, y_curr_r = y_next_c, y_next_l, y_next_r
+                    x_curr_l, x_curr_r = x_next_l, x_next_r
+            
+            # Draw Earthen Shoulder separation line
+            ax.plot([l_sh_x, x_curr_l], [l_sh_y, y_curr_l], color='saddlebrown', linestyle=':', linewidth=1.5, label='Earthen Shoulder boundary')
+            ax.plot([r_sh_x, x_curr_r], [r_sh_y, y_curr_r], color='saddlebrown', linestyle=':', linewidth=1.5)
 
         # Center line
         try:
@@ -271,11 +306,23 @@ if not st.session_state.ogl_df.empty:
             pass
 
         sorted_x = sorted(list(set([round(x, 3) for x in prop_x] + [round(x, 3) for x in plot_ogl_x])))
-        cell_text = [[get_elev(prop_line, x) for x in sorted_x], [get_elev(ogl_line, x) for x in sorted_x], [f"{x:.3f}" for x in sorted_x]]
+        
+        # Elev Calculation for table
+        top_surf_pts = [(l_sh_x, l_sh_y), (l_cw_x, l_cw_y), (0, frl_v), (r_cw_x, r_cw_y), (r_sh_x, r_sh_y)]
+        top_surf_line = LineString(top_surf_pts)
+        
+        prop_elevs = []
+        for x in sorted_x:
+            if l_sh_x <= x <= r_sh_x:
+                prop_elevs.append(get_elev(top_surf_line, x))
+            else:
+                prop_elevs.append(get_elev(prop_line, x))
+                
+        cell_text = [prop_elevs, [get_elev(ogl_line, x) for x in sorted_x], [f"{x:.3f}" for x in sorted_x]]
         
         try:
             nan = float('nan')
-            y_p = [float(y) if y != "-" else nan for y in cell_text[0]]
+            y_p = [float(y) if y != "-" else nan for y in [get_elev(prop_line, x) for x in sorted_x]]
             y_o = [float(y) if y != "-" else nan for y in cell_text[1]]
             ax.fill_between(sorted_x, y_o, y_p, where=[p >= o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='lightblue', edgecolor='blue', alpha=0.3, hatch='///', label='EW Fill')
             ax.fill_between(sorted_x, y_o, y_p, where=[p < o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='lightpink', edgecolor='red', alpha=0.3, hatch='\\\\\\', label='EW Cut')
@@ -284,8 +331,7 @@ if not st.session_state.ogl_df.empty:
 
         ax.set_xticks([])
         
-        # Table Row Label dynamic banaya gaya hai
-        lbl_1 = "Formation Elev (m)" if include_crust else "Proposed Elev (m)"
+        lbl_1 = "Design Top Elev (m)" if include_crust else "Proposed Elev (m)"
         the_table = ax.table(cellText=cell_text, rowLabels=[lbl_1, "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -0.65, 1, 0.65])
         the_table.auto_set_font_size(False)
         the_table.set_fontsize(8)
@@ -301,14 +347,14 @@ if not st.session_state.ogl_df.empty:
         ax.set_ylabel("Elevation (m)")
         ax.grid(True, linestyle=':', alpha=0.7)
         
-        # Dynamic Legend for layers
+        # Dynamic Legend
         handles, labels = ax.get_legend_handles_labels()
-        if include_crust and total_crust_m > 0:
+        if include_crust and sum(crust_thk.values()) > 0:
             for name, thk, col, alp, htc in layers:
                 if thk > 0:
-                    patch = mpatches.Patch(facecolor=col, alpha=alp, hatch=htc, edgecolor='black', label=name)
+                    patch = mpatches.Patch(facecolor=col, alpha=alp, hatch=htc, edgecolor='black', label=f"{name} Layer")
                     handles.append(patch)
-                    labels.append(name)
+                    labels.append(f"{name} Layer")
                     
         ax.legend(handles, labels, loc="upper right", framealpha=1.0, fontsize=8)
         
@@ -389,7 +435,7 @@ if not st.session_state.ogl_df.empty:
                 st.pyplot(fig_l)
                 buf_l = io.BytesIO()
                 fig_l.savefig(buf_l, format="pdf", bbox_inches="tight")
-                st.download_button(label="🖨️ Download L-Section (PDF)", data=buf_l.getvalue(), file_name="L_Section.pdf", mime="application/pdf")
+                st.download_button(label="🖨️️ Download L-Section (PDF)", data=buf_l.getvalue(), file_name="L_Section.pdf", mime="application/pdf")
 
     st.markdown("---")
     st.subheader("📦 Advanced QTY & Export (Pro)")
@@ -413,7 +459,7 @@ if not st.session_state.ogl_df.empty:
 
     with col_x2:
         if st.button("📊 Calculate Advanced QTY Sheet"):
-            with st.spinner("Calculating volumes & crust..."):
+            with st.spinner("Calculating Trapz Volumes & Crust..."):
                 ch_list = []
                 for c in chainages:
                     try:
@@ -432,15 +478,7 @@ if not st.session_state.ogl_df.empty:
                     ogl_line = LineString([(-500, ogl_points[0][1])] + ogl_points + [(500, ogl_points[-1][1])])
                     frl_v = st.session_state.frl_dict[ch_str]
                     
-                    l_e = frl_v - (l_width * (l_camber / 100.0))
-                    r_e = frl_v - (r_width * (r_camber / 100.0))
-                    
-                    total_cr_m = sum(crust_thk.values())/1000.0 if include_crust else 0.0
-                    f_c = frl_v - total_cr_m
-                    f_l = l_e - total_cr_m
-                    f_r = r_e - total_cr_m
-                    
-                    prop_pts = calculate_toe_points(ogl_line, -l_width, f_l, l_slope, True, max_l_toe) + [(-l_width, f_l), (0, f_c), (r_width, f_r)] + calculate_toe_points(ogl_line, r_width, f_r, r_slope, False, max_r_toe)
+                    prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y = get_geometry(ogl_line, frl_v)
                     
                     cut_area, fill_area = 0.0, 0.0
                     try:
@@ -460,16 +498,22 @@ if not st.session_state.ogl_df.empty:
                     
                     row_data = {"Chainage": ch_str, "Length (L)": round(L,3)}
                     
+                    # NAYA BADLAAV: Accurate Trapezoidal Area for Pavement Layers
                     if include_crust:
-                        road_width = l_width + r_width
-                        row_data.update({
-                            "BC Vol (cum)": round(L * road_width * (crust_thk['bc']/1000.0), 3),
-                            "DBM Vol (cum)": round(L * road_width * (crust_thk['dbm']/1000.0), 3),
-                            "WMM Vol (cum)": round(L * road_width * (crust_thk['wmm']/1000.0), 3),
-                            "GSB Vol (cum)": round(L * road_width * (crust_thk['gsb']/1000.0), 3),
-                            "Subgrade Vol (cum)": round(L * road_width * (crust_thk['subgrade']/1000.0), 3),
-                        })
-                        
+                        x_curr_l, x_curr_r = l_cw_x, r_cw_x
+                        for key in ['bc', 'dbm', 'wmm', 'gsb', 'subgrade']:
+                            thk = crust_thk[key] / 1000.0
+                            if thk > 0:
+                                top_width = x_curr_r - x_curr_l
+                                x_next_l = x_curr_l - thk * crust_slope
+                                x_next_r = x_curr_r + thk * crust_slope
+                                bot_width = x_next_r - x_next_l
+                                
+                                layer_area = 0.5 * (top_width + bot_width) * thk
+                                row_data[f"{key.upper()} Vol (cum)"] = round(layer_area * L, 3)
+                                
+                                x_curr_l, x_curr_r = x_next_l, x_next_r
+                                
                     row_data.update({
                         "EW Cut Area": round(cut_area,3), "EW Fill Area": round(fill_area,3), 
                         "EW Cut Vol": round(c_vol,3), "EW Fill Vol": round(f_vol,3), 
