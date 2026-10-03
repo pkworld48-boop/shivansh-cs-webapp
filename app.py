@@ -85,14 +85,22 @@ ogl_file = st.sidebar.file_uploader("Upload OGL CSV", type=['csv'])
 frl_file = st.sidebar.file_uploader("Upload FRL CSV", type=['csv'])
 
 if ogl_file:
-    df = pd.read_csv(ogl_file)
-    df['Chainage'] = df['Chainage'].apply(lambda x: f"{float(x):g}" if pd.notnull(x) else str(x))
-    st.session_state.ogl_df = df
+    file_bytes = ogl_file.getvalue()
+    # NAYA BADLAAV: Ye check karega ki file nayi hai ya purani
+    if 'ogl_bytes' not in st.session_state or st.session_state.ogl_bytes != file_bytes:
+        df = pd.read_csv(ogl_file)
+        df['Chainage'] = df['Chainage'].apply(lambda x: f"{float(x):g}" if pd.notnull(x) else str(x))
+        st.session_state.ogl_df = df
+        st.session_state.ogl_bytes = file_bytes
 
 if frl_file:
-    df_f = pd.read_csv(frl_file)
-    st.session_state.frl_dict = {f"{float(row['Chainage']):g}": float(row['FRL']) for _, row in df_f.iterrows() if pd.notnull(row['Chainage'])}
-
+    file_bytes_f = frl_file.getvalue()
+    # NAYA BADLAAV: FRL ke liye bhi wahi check lagaya hai
+    if 'frl_bytes' not in st.session_state or st.session_state.frl_bytes != file_bytes_f:
+        df_f = pd.read_csv(frl_file)
+        st.session_state.frl_dict = {f"{float(row['Chainage']):g}": float(row['FRL']) for _, row in df_f.iterrows() if pd.notnull(row['Chainage'])}
+        st.session_state.frl_bytes = file_bytes_f
+        
 st.sidebar.header("⚙️ Parameters")
 title_prefix = st.sidebar.text_input("Plot Title Prefix", "Cross Section at CH: ")
 camber_val = st.sidebar.number_input("Camber (%)", value=2.5, format="%.2f")
