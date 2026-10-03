@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V3.0)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.0)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -94,15 +94,23 @@ if frl_file:
 st.sidebar.header("⚙️ Parameters")
 title_prefix = st.sidebar.text_input("Plot Title Prefix", "Cross Section at CH: ")
 
-st.sidebar.markdown("**Camber / Cross-Fall**")
-cam_col1, cam_col2 = st.sidebar.columns(2)
-with cam_col1:
-    l_camber = st.number_input("Left Camber (%)", value=2.5, format="%.2f")
-with cam_col2:
-    r_camber = st.number_input("Right Camber (%)", value=2.5, format="%.2f")
+# NAYA BADLAAV: Carriageway aur Shoulder ka alag alag camber
+st.sidebar.markdown("**Carriageway Camber (%)**")
+cw_cam_col1, cw_cam_col2 = st.sidebar.columns(2)
+with cw_cam_col1:
+    l_cw_camber = st.number_input("Left CW Camber (%)", value=2.50, format="%.2f")
+with cw_cam_col2:
+    r_cw_camber = st.number_input("Right CW Camber (%)", value=2.50, format="%.2f")
+
+st.sidebar.markdown("**Shoulder Camber (%)**")
+sh_cam_col1, sh_cam_col2 = st.sidebar.columns(2)
+with sh_cam_col1:
+    l_sh_camber = st.number_input("Left Shldr Camber (%)", value=4.00, format="%.2f")
+with sh_cam_col2:
+    r_sh_camber = st.number_input("Right Shldr Camber (%)", value=4.00, format="%.2f")
 
 st.sidebar.markdown("**Pavement Crust Layers**")
-include_crust = st.sidebar.checkbox("☑ Include Crust Layers")
+include_crust = st.sidebar.checkbox("☑ Include Crust Layers", value=True)
 crust_thk = {'bc': 0.0, 'dbm': 0.0, 'wmm': 0.0, 'gsb': 0.0, 'subgrade': 0.0}
 crust_slope = 0.0
 
@@ -114,20 +122,20 @@ if include_crust:
         crust_thk['wmm'] = st.number_input("WMM (mm)", value=250.0)
         crust_thk['subgrade'] = st.number_input("Subgrade (mm)", value=500.0)
     with cr_c2:
-        crust_thk['dbm'] = st.number_input("DBM (mm)", value=50.0)
-        crust_thk['gsb'] = st.number_input("GSB (mm)", value=200.0)
+        crust_thk['dbm'] = st.number_input("DBM (mm)", value=75.0)
+        crust_thk['gsb'] = st.number_input("GSB (mm)", value=230.0)
 
 st.sidebar.markdown("**Carriageway & Shoulders**")
 col1, col2 = st.sidebar.columns(2)
 with col1:
     st.markdown("**LEFT SIDE**")
-    l_cw = abs(st.number_input("L-Carriageway", value=3.75))
+    l_cw = abs(st.number_input("L-Carriageway", value=3.50))
     l_sh = abs(st.number_input("L-Shoulder", value=1.50))
     l_slope = st.number_input("L-Toe Slope (H:1)", value=2.0)
     max_l_toe = -abs(st.number_input("Max L-Toe", value=30.0))
 with col2:
     st.markdown("**RIGHT SIDE**")
-    r_cw = abs(st.number_input("R-Carriageway", value=3.75))
+    r_cw = abs(st.number_input("R-Carriageway", value=3.50))
     r_sh = abs(st.number_input("R-Shoulder", value=1.50))
     r_slope = st.number_input("R-Toe Slope (H:1)", value=2.0)
     max_r_toe = abs(st.number_input("Max R-Toe", value=30.0))
@@ -174,20 +182,20 @@ if not st.session_state.ogl_df.empty:
         return "-"
 
     def get_geometry(ogl_line, frl_v):
-        # 1. Top Surface Coordinates
+        # NAYA BADLAAV: Alag-alag camber logic
         l_cw_x = -l_cw
-        l_cw_y = frl_v - l_cw * (l_camber / 100.0)
+        l_cw_y = frl_v - l_cw * (l_cw_camber / 100.0)
         r_cw_x = r_cw
-        r_cw_y = frl_v - r_cw * (r_camber / 100.0)
+        r_cw_y = frl_v - r_cw * (r_cw_camber / 100.0)
         
+        # Shoulder kinare ki elevation, carriageway edge se calculate hogi
         l_sh_x = -(l_cw + l_sh)
-        l_sh_y = frl_v - (l_cw + l_sh) * (l_camber / 100.0)
+        l_sh_y = l_cw_y - l_sh * (l_sh_camber / 100.0)
         r_sh_x = (r_cw + r_sh)
-        r_sh_y = frl_v - (r_cw + r_sh) * (r_camber / 100.0)
+        r_sh_y = r_cw_y - r_sh * (r_sh_camber / 100.0)
         
         total_crust_m = sum(crust_thk.values()) / 1000.0 if include_crust else 0.0
         
-        # 2. Formation Line & Core Points
         if include_crust:
             l_crust_bot_x = l_cw_x - total_crust_m * crust_slope
             l_crust_bot_y = l_cw_y - total_crust_m
@@ -211,7 +219,6 @@ if not st.session_state.ogl_df.empty:
             outer_l_x, outer_l_y = l_sh_x, l_sh_y
             outer_r_x, outer_r_y = r_sh_x, r_sh_y
 
-        # 3. Add Toe Points
         prop_pts = calculate_toe_points(ogl_line, outer_l_x, outer_l_y, l_slope, True, max_l_toe) + \
                    core_pts + \
                    calculate_toe_points(ogl_line, outer_r_x, outer_r_y, r_slope, False, max_r_toe)
@@ -245,14 +252,12 @@ if not st.session_state.ogl_df.empty:
 
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
         
-        # Earthwork Formation Boundary
         ax.plot(prop_x, prop_y, marker='s', color='blue', label='Earthwork / Formation Line', linewidth=2, linestyle='--' if include_crust else '-')
         
-        # Top Surface Line (Navy)
+        # NAYA BADLAAV: Top Surface dual-slope plot karega
         ax.plot([l_sh_x, l_cw_x, 0, r_cw_x, r_sh_x], [l_sh_y, l_cw_y, frl_v, r_cw_y, r_sh_y], color='navy', linewidth=2.5, label='Top Surface')
         ax.plot([0], [frl_v], marker='*', color='red', markersize=10, label=f'FRL ({frl_v}m)')
 
-        # Drawing Trapezoidal Crust Layers & Earthen Shoulder
         if include_crust and sum(crust_thk.values()) > 0:
             y_curr_c, y_curr_l, y_curr_r = frl_v, l_cw_y, r_cw_y
             x_curr_l, x_curr_r = l_cw_x, r_cw_x
@@ -280,18 +285,15 @@ if not st.session_state.ogl_df.empty:
                     y_curr_c, y_curr_l, y_curr_r = y_next_c, y_next_l, y_next_r
                     x_curr_l, x_curr_r = x_next_l, x_next_r
             
-            # Draw Earthen Shoulder separation line
-            ax.plot([l_sh_x, x_curr_l], [l_sh_y, y_curr_l], color='saddlebrown', linestyle=':', linewidth=1.5, label='Earthen Shoulder boundary')
+            ax.plot([l_sh_x, x_curr_l], [l_sh_y, y_curr_l], color='saddlebrown', linestyle=':', linewidth=1.5, label='Earthen Shoulder')
             ax.plot([r_sh_x, x_curr_r], [r_sh_y, y_curr_r], color='saddlebrown', linestyle=':', linewidth=1.5)
 
-        # Center line
         try:
             ogl_y_center = float(get_elev(ogl_line, 0))
             ax.vlines(x=0, ymin=ogl_y_center, ymax=frl_v, color='red', linestyle=':')
         except:
             pass
         
-        # Earthwork Calculation
         cut_area, fill_area = 0.0, 0.0
         try:
             datum_y = min([y for x, y in ogl_points] + [y for x, y in prop_pts]) - 10
@@ -307,7 +309,6 @@ if not st.session_state.ogl_df.empty:
 
         sorted_x = sorted(list(set([round(x, 3) for x in prop_x] + [round(x, 3) for x in plot_ogl_x])))
         
-        # Elev Calculation for table
         top_surf_pts = [(l_sh_x, l_sh_y), (l_cw_x, l_cw_y), (0, frl_v), (r_cw_x, r_cw_y), (r_sh_x, r_sh_y)]
         top_surf_line = LineString(top_surf_pts)
         
@@ -347,7 +348,6 @@ if not st.session_state.ogl_df.empty:
         ax.set_ylabel("Elevation (m)")
         ax.grid(True, linestyle=':', alpha=0.7)
         
-        # Dynamic Legend
         handles, labels = ax.get_legend_handles_labels()
         if include_crust and sum(crust_thk.values()) > 0:
             for name, thk, col, alp, htc in layers:
@@ -435,7 +435,7 @@ if not st.session_state.ogl_df.empty:
                 st.pyplot(fig_l)
                 buf_l = io.BytesIO()
                 fig_l.savefig(buf_l, format="pdf", bbox_inches="tight")
-                st.download_button(label="🖨️️ Download L-Section (PDF)", data=buf_l.getvalue(), file_name="L_Section.pdf", mime="application/pdf")
+                st.download_button(label="🖨 Download L-Section (PDF)", data=buf_l.getvalue(), file_name="L_Section.pdf", mime="application/pdf")
 
     st.markdown("---")
     st.subheader("📦 Advanced QTY & Export (Pro)")
@@ -498,7 +498,6 @@ if not st.session_state.ogl_df.empty:
                     
                     row_data = {"Chainage": ch_str, "Length (L)": round(L,3)}
                     
-                    # NAYA BADLAAV: Accurate Trapezoidal Area for Pavement Layers
                     if include_crust:
                         x_curr_l, x_curr_r = l_cw_x, r_cw_x
                         for key in ['bc', 'dbm', 'wmm', 'gsb', 'subgrade']:
