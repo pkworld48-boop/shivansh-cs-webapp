@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.2)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.3)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -200,7 +200,6 @@ if not st.session_state.ogl_df.empty:
             r_crust_bot_y = r_cw_y - total_crust_m
             c_crust_bot_y = frl_v - total_crust_m
             
-            # NAYA BADLAAV: Earthen Shoulder ke outer edge slope ka perfect hisaab
             dy_l = max(0, l_sh_y - l_crust_bot_y)
             outer_l_x = min(l_sh_x - dy_l * l_slope, l_crust_bot_x)
             outer_l_y = l_crust_bot_y
@@ -288,20 +287,20 @@ if not st.session_state.ogl_df.empty:
                     patch = mpatches.Patch(facecolor=col, alpha=alp, hatch=htc, edgecolor='black', label=f"{name} Layer")
                     layers_legend_handles.append(patch)
             
-            # NAYA BADLAAV: Earthen Shoulder ab solid sloped polygon banega
+            # NAYA BADLAAV: Earthen Shoulder ka hatch ekdum Subgrade jaisa kar diya
             if outer_l_x < x_curr_l:
                 poly_left_sh_x = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
                 poly_left_sh_y = [l_sh_y, l_cw_y, outer_l_y, outer_l_y]
-                ax.fill(poly_left_sh_x, poly_left_sh_y, color='saddlebrown', alpha=0.4, hatch='xx', edgecolor='black')
+                ax.fill(poly_left_sh_x, poly_left_sh_y, color='saddlebrown', alpha=0.6, hatch='xxx', edgecolor='black')
                 ax.plot([l_sh_x, outer_l_x], [l_sh_y, outer_l_y], color='saddlebrown', linestyle='-', linewidth=1.5)
             
             if outer_r_x > x_curr_r:
                 poly_right_sh_x = [r_sh_x, r_cw_x, x_curr_r, outer_r_x]
                 poly_right_sh_y = [r_sh_y, r_cw_y, outer_r_y, outer_r_y]
-                ax.fill(poly_right_sh_x, poly_right_sh_y, color='saddlebrown', alpha=0.4, hatch='xx', edgecolor='black')
+                ax.fill(poly_right_sh_x, poly_right_sh_y, color='saddlebrown', alpha=0.6, hatch='xxx', edgecolor='black')
                 ax.plot([r_sh_x, outer_r_x], [r_sh_y, outer_r_y], color='saddlebrown', linestyle='-', linewidth=1.5)
             
-            es_patch = mpatches.Patch(facecolor='saddlebrown', alpha=0.4, hatch='xx', edgecolor='black', label="Earthen Shoulder")
+            es_patch = mpatches.Patch(facecolor='saddlebrown', alpha=0.6, hatch='xxx', edgecolor='black', label="Earthen Shoulder")
             layers_legend_handles.append(es_patch)
 
         try:
@@ -325,7 +324,6 @@ if not st.session_state.ogl_df.empty:
 
         sorted_x = sorted(list(set([round(x, 3) for x in prop_x] + [round(x, 3) for x in plot_ogl_x])))
         
-        # NAYA BADLAAV: Table mein saare absolute Top Elevations dikhane ke liye
         full_top_pts = calculate_toe_points(ogl_line, l_sh_x, l_sh_y, l_slope, True, max_l_toe) + \
                        [(l_sh_x, l_sh_y), (l_cw_x, l_cw_y), (0, frl_v), (r_cw_x, r_cw_y), (r_sh_x, r_sh_y)] + \
                        calculate_toe_points(ogl_line, r_sh_x, r_sh_y, r_slope, False, max_r_toe)
@@ -526,7 +524,6 @@ if not st.session_state.ogl_df.empty:
                                 
                                 x_curr_l, x_curr_r = x_next_l, x_next_r
                         
-                        # NAYA BADLAAV: Precise Earthen Shoulder Vol (cum)
                         sh_area = 0.0
                         def p_area(x, y):
                             return 0.5 * abs(sum(x[i]*y[i+1] - x[i+1]*y[i] for i in range(len(x)-1)) + x[-1]*y[0] - x[0]*y[-1])
