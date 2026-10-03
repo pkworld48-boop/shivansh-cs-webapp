@@ -14,7 +14,7 @@ custom_css = """
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 
-/* NAYA BADLAAV: Ye 2 lines GitHub icon aur Fork button ko chhipayengi */
+/* GitHub Icon aur Fork button chhipane ke liye */
 [data-testid="stToolbar"] {visibility: hidden !important;}
 [data-testid="stHeaderActionElements"] {visibility: hidden !important;}
 .viewerBadge_container {display: none !important;}
@@ -85,22 +85,14 @@ ogl_file = st.sidebar.file_uploader("Upload OGL CSV", type=['csv'])
 frl_file = st.sidebar.file_uploader("Upload FRL CSV", type=['csv'])
 
 if ogl_file:
-    file_bytes = ogl_file.getvalue()
-    # NAYA BADLAAV: Ye check karega ki file nayi hai ya purani
-    if 'ogl_bytes' not in st.session_state or st.session_state.ogl_bytes != file_bytes:
-        df = pd.read_csv(ogl_file)
-        df['Chainage'] = df['Chainage'].apply(lambda x: f"{float(x):g}" if pd.notnull(x) else str(x))
-        st.session_state.ogl_df = df
-        st.session_state.ogl_bytes = file_bytes
+    df = pd.read_csv(ogl_file)
+    df['Chainage'] = df['Chainage'].apply(lambda x: f"{float(x):g}" if pd.notnull(x) else str(x))
+    st.session_state.ogl_df = df
 
 if frl_file:
-    file_bytes_f = frl_file.getvalue()
-    # NAYA BADLAAV: FRL ke liye bhi wahi check lagaya hai
-    if 'frl_bytes' not in st.session_state or st.session_state.frl_bytes != file_bytes_f:
-        df_f = pd.read_csv(frl_file)
-        st.session_state.frl_dict = {f"{float(row['Chainage']):g}": float(row['FRL']) for _, row in df_f.iterrows() if pd.notnull(row['Chainage'])}
-        st.session_state.frl_bytes = file_bytes_f
-        
+    df_f = pd.read_csv(frl_file)
+    st.session_state.frl_dict = {f"{float(row['Chainage']):g}": float(row['FRL']) for _, row in df_f.iterrows() if pd.notnull(row['Chainage'])}
+
 st.sidebar.header("⚙️ Parameters")
 title_prefix = st.sidebar.text_input("Plot Title Prefix", "Cross Section at CH: ")
 camber_val = st.sidebar.number_input("Camber (%)", value=2.5, format="%.2f")
@@ -183,8 +175,8 @@ if not st.session_state.ogl_df.empty:
             
         fig, ax = plt.subplots(figsize=(11, 7.8))
         
-        # NAYA BADLAAV: Niche ki margin badhayi (bottom=0.45) taaki table fail sake
-        fig.subplots_adjust(left=0.150, bottom=0.45, right=0.95, top=0.82) 
+        # Space and margin layout
+        fig.subplots_adjust(left=0.150, bottom=0.55, right=0.95, top=0.82) 
         fig.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
         fig.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
 
@@ -223,18 +215,16 @@ if not st.session_state.ogl_df.empty:
             pass
 
         ax.set_xticks([])
-        # NAYA BADLAAV: Table ki height badhayi (height ko 0.9 set kiya)
-        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -.53, 1, 0.53])
+        the_table = ax.table(cellText=cell_text, rowLabels=["Proposed Elev (m)", "OGL Elev (m)", "Offset (m)"], loc='bottom', bbox=[0, -0.65, 1, 0.65])
         the_table.auto_set_font_size(False)
-        # NAYA BADLAAV: Font size thoda chota kiya taaki text dabbe ke andar hi rahe
         the_table.set_fontsize(8)
         for (row, col), cell in the_table.get_celld().items():
             if col >= 0:
                 cell.get_text().set_rotation(90)
                 
-        fig.text(0.20, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
-        fig.text(0.50, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
-        fig.text(0.80, 0.03, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
+        fig.text(0.20, 0.01, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
+        fig.text(0.50, 0.01, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
+        fig.text(0.80, 0.01, "________________________\n(Seal & Sign)", ha='center', va='bottom', fontsize=11, fontweight='bold')
         
         ax.set_title(f"{title_prefix} {current_ch}", pad=15)
         ax.set_ylabel("Elevation (m)")
@@ -288,7 +278,7 @@ if not st.session_state.ogl_df.empty:
             if chainages_num:
                 fig_l, ax_l = plt.subplots(figsize=(12, 9.5))
                 
-                fig_l.subplots_adjust(left=0.15, bottom=0.45, right=0.95, top=0.82)
+                fig_l.subplots_adjust(left=0.15, bottom=0.55, right=0.95, top=0.82)
                 fig_l.text(0.02, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
                 fig_l.text(0.02, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
 
@@ -302,7 +292,7 @@ if not st.session_state.ogl_df.empty:
                 row_ogl = [f"{v:.3f}" for v in ogl_elevs]
                 row_ch = [f"{v:g}" for v in chainages_num]
                 
-                t_table = ax_l.table(cellText=[row_frl, row_ogl, row_ch], rowLabels=["Proposed FRL (m)", "Center OGL (m)", "Chainage (m)"], loc='bottom', bbox=[0, -0.7, 1, 0.6])
+                t_table = ax_l.table(cellText=[row_frl, row_ogl, row_ch], rowLabels=["Proposed FRL (m)", "Center OGL (m)", "Chainage (m)"], loc='bottom', bbox=[0, -0.75, 1, 0.70])
                 t_table.auto_set_font_size(False)
                 t_table.set_fontsize(8)
                 for (row, col), cell in t_table.get_celld().items():
