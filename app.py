@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.1)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.2)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -194,25 +194,27 @@ if not st.session_state.ogl_df.empty:
         total_crust_m = sum(crust_thk.values()) / 1000.0 if include_crust else 0.0
         
         if include_crust:
-            x_curr_l = l_cw_x - total_crust_m * crust_slope
-            y_curr_l = l_cw_y - total_crust_m
-            x_curr_r = r_cw_x + total_crust_m * crust_slope
-            y_curr_r = r_cw_y - total_crust_m
+            l_crust_bot_x = l_cw_x - total_crust_m * crust_slope
+            l_crust_bot_y = l_cw_y - total_crust_m
+            r_crust_bot_x = r_cw_x + total_crust_m * crust_slope
+            r_crust_bot_y = r_cw_y - total_crust_m
+            c_crust_bot_y = frl_v - total_crust_m
             
-            outer_l_x = min(l_sh_x, x_curr_l)
-            outer_l_y = l_sh_y - total_crust_m if outer_l_x == l_sh_x else y_curr_l
+            # NAYA BADLAAV: Earthen Shoulder ke outer edge slope ka perfect hisaab
+            dy_l = max(0, l_sh_y - l_crust_bot_y)
+            outer_l_x = min(l_sh_x - dy_l * l_slope, l_crust_bot_x)
+            outer_l_y = l_crust_bot_y
             
-            outer_r_x = max(r_sh_x, x_curr_r)
-            outer_r_y = r_sh_y - total_crust_m if outer_r_x == r_sh_x else y_curr_r
+            dy_r = max(0, r_sh_y - r_crust_bot_y)
+            outer_r_x = max(r_sh_x + dy_r * r_slope, r_crust_bot_x)
+            outer_r_y = r_crust_bot_y
             
             core_pts = []
-            if outer_l_x == l_sh_x:
-                core_pts.append((outer_l_x, outer_l_y))
-            core_pts.append((x_curr_l, y_curr_l))
-            core_pts.append((0, frl_v - total_crust_m))
-            core_pts.append((x_curr_r, y_curr_r))
-            if outer_r_x == r_sh_x:
-                core_pts.append((outer_r_x, outer_r_y))
+            if outer_l_x < l_crust_bot_x: core_pts.append((outer_l_x, outer_l_y))
+            core_pts.append((l_crust_bot_x, l_crust_bot_y))
+            core_pts.append((0, c_crust_bot_y))
+            core_pts.append((r_crust_bot_x, r_crust_bot_y))
+            if outer_r_x > r_crust_bot_x: core_pts.append((outer_r_x, outer_r_y))
         else:
             core_pts = [(l_sh_x, l_sh_y), (0, frl_v), (r_sh_x, r_sh_y)]
             outer_l_x, outer_l_y = l_sh_x, l_sh_y
@@ -222,7 +224,7 @@ if not st.session_state.ogl_df.empty:
                    core_pts + \
                    calculate_toe_points(ogl_line, outer_r_x, outer_r_y, r_slope, False, max_r_toe)
                    
-        return prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y
+        return prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y, outer_l_x, outer_l_y, outer_r_x, outer_r_y
 
     def draw_cs(current_ch):
         ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == current_ch].copy()
@@ -233,7 +235,7 @@ if not st.session_state.ogl_df.empty:
         ogl_points = sorted(list(zip(ch_df['Offset'].tolist(), ch_df['Elevation'].tolist())), key=lambda pt: pt[0])
         ogl_line = LineString([(-500, ogl_points[0][1])] + ogl_points + [(500, ogl_points[-1][1])])
         
-        prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y = get_geometry(ogl_line, frl_v)
+        prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y, outer_l_x, outer_l_y, outer_r_x, outer_r_y = get_geometry(ogl_line, frl_v)
         
         prop_x, prop_y = [p[0] for p in prop_pts], [p[1] for p in prop_pts]
         prop_line = LineString(prop_pts)
@@ -286,20 +288,18 @@ if not st.session_state.ogl_df.empty:
                     patch = mpatches.Patch(facecolor=col, alpha=alp, hatch=htc, edgecolor='black', label=f"{name} Layer")
                     layers_legend_handles.append(patch)
             
-            # NAYA BADLAAV: Earthen Shoulder as a Solid Hatched Polygon
-            total_crust_m = sum(crust_thk.values()) / 1000.0
+            # NAYA BADLAAV: Earthen Shoulder ab solid sloped polygon banega
+            if outer_l_x < x_curr_l:
+                poly_left_sh_x = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
+                poly_left_sh_y = [l_sh_y, l_cw_y, outer_l_y, outer_l_y]
+                ax.fill(poly_left_sh_x, poly_left_sh_y, color='saddlebrown', alpha=0.4, hatch='xx', edgecolor='black')
+                ax.plot([l_sh_x, outer_l_x], [l_sh_y, outer_l_y], color='saddlebrown', linestyle='-', linewidth=1.5)
             
-            outer_l_x = min(l_sh_x, x_curr_l)
-            outer_l_y = l_sh_y - total_crust_m if outer_l_x == l_sh_x else y_curr_l
-            poly_left_sh_x = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
-            poly_left_sh_y = [l_sh_y, l_cw_y, y_curr_l, outer_l_y]
-            ax.fill(poly_left_sh_x, poly_left_sh_y, color='saddlebrown', alpha=0.4, hatch='xx', edgecolor='black')
-            
-            outer_r_x = max(r_sh_x, x_curr_r)
-            outer_r_y = r_sh_y - total_crust_m if outer_r_x == r_sh_x else y_curr_r
-            poly_right_sh_x = [r_sh_x, r_cw_x, x_curr_r, outer_r_x]
-            poly_right_sh_y = [r_sh_y, r_cw_y, y_curr_r, outer_r_y]
-            ax.fill(poly_right_sh_x, poly_right_sh_y, color='saddlebrown', alpha=0.4, hatch='xx', edgecolor='black')
+            if outer_r_x > x_curr_r:
+                poly_right_sh_x = [r_sh_x, r_cw_x, x_curr_r, outer_r_x]
+                poly_right_sh_y = [r_sh_y, r_cw_y, outer_r_y, outer_r_y]
+                ax.fill(poly_right_sh_x, poly_right_sh_y, color='saddlebrown', alpha=0.4, hatch='xx', edgecolor='black')
+                ax.plot([r_sh_x, outer_r_x], [r_sh_y, outer_r_y], color='saddlebrown', linestyle='-', linewidth=1.5)
             
             es_patch = mpatches.Patch(facecolor='saddlebrown', alpha=0.4, hatch='xx', edgecolor='black', label="Earthen Shoulder")
             layers_legend_handles.append(es_patch)
@@ -325,21 +325,20 @@ if not st.session_state.ogl_df.empty:
 
         sorted_x = sorted(list(set([round(x, 3) for x in prop_x] + [round(x, 3) for x in plot_ogl_x])))
         
-        top_surf_pts = [(l_sh_x, l_sh_y), (l_cw_x, l_cw_y), (0, frl_v), (r_cw_x, r_cw_y), (r_sh_x, r_sh_y)]
-        top_surf_line = LineString(top_surf_pts)
+        # NAYA BADLAAV: Table mein saare absolute Top Elevations dikhane ke liye
+        full_top_pts = calculate_toe_points(ogl_line, l_sh_x, l_sh_y, l_slope, True, max_l_toe) + \
+                       [(l_sh_x, l_sh_y), (l_cw_x, l_cw_y), (0, frl_v), (r_cw_x, r_cw_y), (r_sh_x, r_sh_y)] + \
+                       calculate_toe_points(ogl_line, r_sh_x, r_sh_y, r_slope, False, max_r_toe)
+        full_top_line = LineString(full_top_pts)
         
-        prop_elevs = []
-        for x in sorted_x:
-            if l_sh_x <= x <= r_sh_x:
-                prop_elevs.append(get_elev(top_surf_line, x))
-            else:
-                prop_elevs.append(get_elev(prop_line, x))
-                
-        cell_text = [prop_elevs, [get_elev(ogl_line, x) for x in sorted_x], [f"{x:.3f}" for x in sorted_x]]
+        table_elevs = [get_elev(full_top_line, x) for x in sorted_x]
+        hatch_elevs = [get_elev(prop_line, x) for x in sorted_x]
+        
+        cell_text = [table_elevs, [get_elev(ogl_line, x) for x in sorted_x], [f"{x:.3f}" for x in sorted_x]]
         
         try:
             nan = float('nan')
-            y_p = [float(y) if y != "-" else nan for y in [get_elev(prop_line, x) for x in sorted_x]]
+            y_p = [float(y) if y != "-" else nan for y in hatch_elevs]
             y_o = [float(y) if y != "-" else nan for y in cell_text[1]]
             ax.fill_between(sorted_x, y_o, y_p, where=[p >= o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='lightblue', edgecolor='blue', alpha=0.3, hatch='///', label='EW Fill')
             ax.fill_between(sorted_x, y_o, y_p, where=[p < o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='lightpink', edgecolor='red', alpha=0.3, hatch='\\\\\\', label='EW Cut')
@@ -492,7 +491,7 @@ if not st.session_state.ogl_df.empty:
                     ogl_line = LineString([(-500, ogl_points[0][1])] + ogl_points + [(500, ogl_points[-1][1])])
                     frl_v = st.session_state.frl_dict[ch_str]
                     
-                    prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y = get_geometry(ogl_line, frl_v)
+                    prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y, outer_l_x, outer_l_y, outer_r_x, outer_r_y = get_geometry(ogl_line, frl_v)
                     
                     cut_area, fill_area = 0.0, 0.0
                     try:
@@ -527,25 +526,21 @@ if not st.session_state.ogl_df.empty:
                                 
                                 x_curr_l, x_curr_r = x_next_l, x_next_r
                         
-                        # Calculate Earthen Shoulder Volume
-                        total_cr_m = sum(crust_thk.values()) / 1000.0
-                        y_bot_l = l_cw_y - total_cr_m
-                        y_bot_r = r_cw_y - total_cr_m
-                        
-                        outer_l_x = min(l_sh_x, x_curr_l)
-                        outer_l_y = l_sh_y - total_cr_m if outer_l_x == l_sh_x else y_bot_l
-                        px_l = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
-                        py_l = [l_sh_y, l_cw_y, y_bot_l, outer_l_y]
-                        
-                        outer_r_x = max(r_sh_x, x_curr_r)
-                        outer_r_y = r_sh_y - total_cr_m if outer_r_x == r_sh_x else y_bot_r
-                        px_r = [r_sh_x, r_cw_x, x_curr_r, outer_r_x]
-                        py_r = [r_sh_y, r_cw_y, y_bot_r, outer_r_y]
-                        
+                        # NAYA BADLAAV: Precise Earthen Shoulder Vol (cum)
+                        sh_area = 0.0
                         def p_area(x, y):
                             return 0.5 * abs(sum(x[i]*y[i+1] - x[i+1]*y[i] for i in range(len(x)-1)) + x[-1]*y[0] - x[0]*y[-1])
-                        
-                        sh_area = p_area(px_l, py_l) + p_area(px_r, py_r)
+                            
+                        if outer_l_x < x_curr_l:
+                            px_l = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
+                            py_l = [l_sh_y, l_cw_y, outer_l_y, outer_l_y]
+                            sh_area += p_area(px_l, py_l)
+                            
+                        if outer_r_x > x_curr_r:
+                            px_r = [r_sh_x, r_cw_x, x_curr_r, outer_r_x]
+                            py_r = [r_sh_y, r_cw_y, outer_r_y, outer_r_y]
+                            sh_area += p_area(px_r, py_r)
+                            
                         row_data["Earthen Shoulder Vol (cum)"] = round(sh_area * L, 3)
                                 
                     row_data.update({
