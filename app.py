@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.3)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.4)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -253,7 +253,18 @@ if not st.session_state.ogl_df.empty:
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
         ax.plot(prop_x, prop_y, marker='s', color='blue', label='Earthwork / Formation Line', linewidth=2, linestyle='--' if include_crust else '-')
         
-        ax.plot([l_sh_x, l_cw_x, 0, r_cw_x, r_sh_x], [l_sh_y, l_cw_y, frl_v, r_cw_y, r_sh_y], color='navy', linewidth=2.5, label='Top Surface')
+        # NAYA BADLAAV: Paved (Navy) line ab sirf Carriageway par banegi.
+        if include_crust:
+            ax.plot([l_cw_x, 0, r_cw_x], [l_cw_y, frl_v, r_cw_y], color='navy', linewidth=2.5, label='Paved Top Surface')
+            # Earthen Shoulder ke top ke liye simple bhuri (brown) line
+            if l_sh_x < l_cw_x:
+                ax.plot([l_sh_x, l_cw_x], [l_sh_y, l_cw_y], color='saddlebrown', linewidth=1.5)
+            if r_sh_x > r_cw_x:
+                ax.plot([r_cw_x, r_sh_x], [r_cw_y, r_sh_y], color='saddlebrown', linewidth=1.5)
+        else:
+            # Agar crust nahi hai toh poori chaurai ek single line jaisi pehle thi.
+            ax.plot([l_sh_x, l_cw_x, 0, r_cw_x, r_sh_x], [l_sh_y, l_cw_y, frl_v, r_cw_y, r_sh_y], color='navy', linewidth=2.5, label='Top Surface')
+            
         ax.plot([0], [frl_v], marker='*', color='red', markersize=10, label=f'FRL ({frl_v}m)')
 
         layers_legend_handles = []
@@ -261,12 +272,13 @@ if not st.session_state.ogl_df.empty:
             y_curr_c, y_curr_l, y_curr_r = frl_v, l_cw_y, r_cw_y
             x_curr_l, x_curr_r = l_cw_x, r_cw_x
             
+            # NAYA BADLAAV: Subgrade ka alpha 0.3 aur hatch 'xx' kar diya hai (Light & Normal look)
             layers = [
                 ('BC', crust_thk['bc']/1000.0, 'black', 0.8, ''),
                 ('DBM', crust_thk['dbm']/1000.0, 'dimgray', 0.9, ''),
                 ('WMM', crust_thk['wmm']/1000.0, 'orange', 0.6, '...'),
                 ('GSB', crust_thk['gsb']/1000.0, 'gold', 0.5, 'oo'),
-                ('Subgrade', crust_thk['subgrade']/1000.0, 'saddlebrown', 0.6, 'xxx')
+                ('Subgrade', crust_thk['subgrade']/1000.0, 'saddlebrown', 0.3, 'xx')
             ]
             
             for name, thk, col, alp, htc in layers:
@@ -287,20 +299,20 @@ if not st.session_state.ogl_df.empty:
                     patch = mpatches.Patch(facecolor=col, alpha=alp, hatch=htc, edgecolor='black', label=f"{name} Layer")
                     layers_legend_handles.append(patch)
             
-            # NAYA BADLAAV: Earthen Shoulder ka hatch ekdum Subgrade jaisa kar diya
+            # NAYA BADLAAV: Earthen Shoulder ko bhi halka (alpha=0.3, hatch='xx') kiya gaya hai Subgrade jaisa
             if outer_l_x < x_curr_l:
                 poly_left_sh_x = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
                 poly_left_sh_y = [l_sh_y, l_cw_y, outer_l_y, outer_l_y]
-                ax.fill(poly_left_sh_x, poly_left_sh_y, color='saddlebrown', alpha=0.6, hatch='xxx', edgecolor='black')
+                ax.fill(poly_left_sh_x, poly_left_sh_y, color='saddlebrown', alpha=0.3, hatch='xx', edgecolor='black', linewidth=0.8)
                 ax.plot([l_sh_x, outer_l_x], [l_sh_y, outer_l_y], color='saddlebrown', linestyle='-', linewidth=1.5)
             
             if outer_r_x > x_curr_r:
                 poly_right_sh_x = [r_sh_x, r_cw_x, x_curr_r, outer_r_x]
                 poly_right_sh_y = [r_sh_y, r_cw_y, outer_r_y, outer_r_y]
-                ax.fill(poly_right_sh_x, poly_right_sh_y, color='saddlebrown', alpha=0.6, hatch='xxx', edgecolor='black')
+                ax.fill(poly_right_sh_x, poly_right_sh_y, color='saddlebrown', alpha=0.3, hatch='xx', edgecolor='black', linewidth=0.8)
                 ax.plot([r_sh_x, outer_r_x], [r_sh_y, outer_r_y], color='saddlebrown', linestyle='-', linewidth=1.5)
             
-            es_patch = mpatches.Patch(facecolor='saddlebrown', alpha=0.6, hatch='xxx', edgecolor='black', label="Earthen Shoulder")
+            es_patch = mpatches.Patch(facecolor='saddlebrown', alpha=0.3, hatch='xx', edgecolor='black', label="Earthen Shoulder")
             layers_legend_handles.append(es_patch)
 
         try:
