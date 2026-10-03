@@ -247,15 +247,6 @@ if not st.session_state.ogl_df.empty:
                 buf = io.BytesIO()
                 fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
                 st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf")
-                
-                st.subheader("✏️ Edit OGL Data for this Chainage")
-                current_ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == ch_sel].copy()
-                edited_ch_df = st.data_editor(current_ch_df, use_container_width=True, num_rows="dynamic", key=f"cs_data_editor_{ch_sel}")
-                
-                if not edited_ch_df.equals(current_ch_df):
-                    other_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] != ch_sel]
-                    st.session_state.ogl_df = pd.concat([other_df, edited_ch_df], ignore_index=True)
-                    st.rerun()
 
     elif view_mode == "L-Section":
         st.subheader("L-Section Profile")
