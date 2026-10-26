@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V5.0)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V5.1)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -92,7 +92,6 @@ if frl_file:
     st.session_state.frl_dict = {f"{float(row['Chainage']):g}": float(row['FRL']) for _, row in df_f.iterrows() if pd.notnull(row['Chainage'])}
 
 st.sidebar.header("📝 Project Details")
-# NAYA BADLAAV: Company ka naam hide/show karne ka option
 show_branding = st.sidebar.checkbox("☑ Show Company Branding", value=True)
 dept_name = st.sidebar.text_input("Department Name", "Public Works Department (PWD)")
 work_name = st.sidebar.text_input("Name of Work", "Construction of Road Project")
@@ -255,13 +254,13 @@ if not st.session_state.ogl_df.empty:
         
         fig.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82) 
         
-        # NAYA BADLAAV: Tickbox ke hisaab se branding dikhana
         if show_branding:
             fig.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
             fig.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
         
-        fig.text(0.50, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
-        fig.text(0.50, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
+        # NAYA BADLAAV: Heading ab thodi aur right side shift (0.65) kar di hai taaki graph ke perfectly center me rahe
+        fig.text(0.65, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
+        fig.text(0.65, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
 
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
         ax.plot(prop_x, prop_y, marker='s', color='blue', label='Earthwork / Formation Line', linewidth=2, linestyle='--' if include_crust else '-')
@@ -430,13 +429,13 @@ if not st.session_state.ogl_df.empty:
                 
                 fig_l.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82)
                 
-                # NAYA BADLAAV: Tickbox ke hisaab se L-Section pe bhi branding hide ho jayegi
                 if show_branding:
                     fig_l.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
                     fig_l.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
                 
-                fig_l.text(0.50, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
-                fig_l.text(0.50, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
+                # NAYA BADLAAV: L-Section me bhi heading right shift (0.65) kar di gayi hai
+                fig_l.text(0.65, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
+                fig_l.text(0.65, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
 
                 ax_l.plot(chainages_num, ogl_elevs, marker='o', color='green', label='Center OGL')
                 ax_l.plot(chainages_num, frl_elevs, marker='s', color='red', label='Proposed FRL')
