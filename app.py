@@ -408,4 +408,225 @@ if not st.session_state.ogl_df.empty:
         
         ax.set_title(f"{title_prefix} {current_ch}", pad=15)
         ax.set_ylabel("Elevation (m)")
-        ax.grid(True, linestyle=':', alpha=
+        ax.grid(True, linestyle=':', alpha=0.7)
+        
+        handles, labels = ax.get_legend_handles_labels()
+        if is_frl_present and include_crust and layers_legend_handles:
+            for patch in layers_legend_handles:
+                handles.append(patch)
+                labels.append(patch.get_label())
+        
+        ax.legend(handles, labels, loc="upper right", bbox_to_anchor=(-0.14, 1), framealpha=1.0, fontsize=8)
+        
+        x_span = max(sorted_x) - min(sorted_x) if sorted_x else 20
+        ax.set_xlim(min(sorted_x) - x_span * 0.05, max(sorted_x) + x_span * 0.20)
+        
+        y_min, y_max = ax.get_ylim()
+        if not is_frl_present:
+            y_min, y_max = min(plot_ogl_y), max(plot_ogl_y)
+            if y_min == y_max:
+                y_min -= 1
+                y_max += 1
+        ax.set_ylim(y_min - (y_max - y_min)*0.05, y_max + (y_max - y_min) * 0.55)
+        
+        return fig
+
+    if view_mode == "Cross Section":
+        st.subheader("Cross Section Preview")
+        fig_cs = draw_cs(ch_sel)
+        if fig_cs:
+            st.pyplot(fig_cs)
+            buf = io.BytesIO()
+            fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
+            st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf")
+
+    elif view_mode == "L-Section":
+        st.subheader("L-Section Profile")
+        ch_list = []
+        for c in chainages:
+            try:
+                ch_list.append((float(c), c))
+            except:
+                pass
+        ch_list.sort(key=lambda x: x[0])
+        chainages_num, ogl_elevs, frl_elevs = [], [], []
+        for num, c_str in ch_list:
+            df_c = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == c_str].copy()
+            if not df_c.empty:
+                center_row = df_c.loc[df_c['Offset'].astype(float).abs().idxmin()]
+                chainages_num.append(num)
+                ogl_elevs.append(float(center_row['Elevation']))
+                frl_elevs.append(st.session_state.frl_dict.get(c_str, None))
+                
+        if chainages_num:
+            fig_l, ax_l = plt.subplots(figsize=(12, 9.5))
+            fig_l.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82)
+            
+            if show_branding:
+                fig_l.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
+                fig_l.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
+            
+            fig_l.text(0.65, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
+            fig_l.text(0.65, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
+
+            ax_l.plot(chainages_num, ogl_elevs, marker='o', color='green', label='Center OGL')
+            
+            valid_frls = [f for f in frl_elevs if f is not None]
+            if valid_frls:
+                frl_plot_x = [c for c, f in zip(chainages_num, frl_elevs) if pd.notnull(f)]
+                frl_plot_y = [f for f in frl_elevs if pd.notnull(f)]
+                
+                if frl_plot_x:
+                    ax_l.plot(frl_plot_x, frl_plot_y, marker='s', color='red', label='Proposed FRL')
+                
+                nan = float('nan')
+                f_arr = [f if pd.notnull(f) else nan for f in frl_elevs]
+                try:
+                    ax_l.fill_between(chainages_num, ogl_elevs, f_arr, where=[(f >= o if pd.notnull(f) else False) for f, o in zip(f_arr, ogl_elevs)], color='maroon', alpha=0.3, label='Fill Area')
+                    ax_l.fill_between(chainages_num, ogl_elevs, f_arr, where=[(f < o if pd.notnull(f) else False) for f, o in zip(f_arr, ogl_elevs)], color='blue', alpha=0.3, label='Cut Area')
+                except:
+                    pass
+            
+            ax_l.set_xticks([])
+            row_frl = [f"{v:.3f}" if v is not None else "-" for v in frl_elevs]
+            row_ogl = [f"{v:.3f}" for v in ogl_elevs]
+            row_ch = [f"{v:g}" for v in chainages_num]
+            
+            t_table = ax_l.table(cellText=[row_frl, row_ogl, row_ch], rowLabels=["Proposed FRL (m)", "Center OGL (m)", "Chainage (m)"], loc='bottom', bbox=[0, -0.75, 1, 0.70])
+            t_table.auto_set_font_size(False)
+            t_table.set_fontsize(8)
+            for (row, col), cell in t_table.get_celld().items():
+                if col >= 0:
+                    cell.get_text().set_rotation(90)
+            
+            ax_l.set_title("Longitudinal Section (L-Section)", fontweight='bold', pad=15)
+            ax_l.set_ylabel("Elevation (m)")
+            
+            ax_l.yaxis.set_major_locator(MultipleLocator(0.5))  
+            ax_l.tick_params(axis='y', labelsize=8) 
+            
+            ax_l.grid(True, linestyle=':', alpha=0.7)
+            
+            ax_l.legend(loc="upper right", bbox_to_anchor=(-0.14, 1), framealpha=1.0, fontsize=8)
+            
+            true_y_min = min(ogl_elevs + (valid_frls if valid_frls else []))
+            true_y_max = max(ogl_elevs + (valid_frls if valid_frls else []))
+            ax_l.set_ylim(true_y_min - 2, true_y_max + 3) 
+            x_span = max(chainages_num) - min(chainages_num) if chainages_num else 100
+            ax_l.set_xlim(min(chainages_num) - x_span * 0.05, max(chainages_num) + x_span * 0.25)
+            
+            st.pyplot(fig_l)
+            buf_l = io.BytesIO()
+            fig_l.savefig(buf_l, format="pdf", bbox_inches="tight")
+            st.download_button(label="🖨 Download L-Section (PDF)", data=buf_l.getvalue(), file_name="L_Section.pdf", mime="application/pdf")
+
+    st.markdown("---")
+    st.subheader("📦 Advanced QTY & Export (Pro)")
+    
+    col_x1, col_x2 = st.columns(2)
+    with col_x1:
+        if st.button("📦 Generate Batch PDF (ZIP)"):
+            with st.spinner("Generating all PDFs... Please wait..."):
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w") as zf:
+                    for c in chainages:
+                        f = draw_cs(c) # NAYA BADLAAV: Ab FRL ke bina bhi OGL ki saari report print ho jayegi!
+                        if f:
+                            b = io.BytesIO()
+                            f.savefig(b, format="pdf", bbox_inches="tight")
+                            zf.writestr(f"CS_CH_{c}.pdf", b.getvalue())
+                            plt.close(f)
+                st.success("Batch Generated!")
+                st.download_button(label="⬇ Download All PDFs (ZIP)", data=zip_buffer.getvalue(), file_name="All_Cross_Sections.zip", mime="application/zip")
+
+    with col_x2:
+        if st.button("📊 Calculate Advanced QTY Sheet"):
+            if not st.session_state.frl_dict:
+                st.warning("⚠️ FRL Data is missing. Quantity calculations require FRL.")
+            else:
+                with st.spinner("Calculating Trapz Volumes & Crust..."):
+                    ch_list = []
+                    for c in chainages:
+                        try:
+                            ch_list.append((float(c), c))
+                        except:
+                            pass
+                    ch_list.sort(key=lambda x: x[0])
+                    qty_data = []
+                    prev_ch, prev_cut, prev_fill = None, 0.0, 0.0
+                    cum_cut, cum_fill = 0.0, 0.0
+                    
+                    for ch_num, ch_str in ch_list:
+                        if ch_str not in st.session_state.frl_dict: continue
+                        ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == ch_str].copy()
+                        ogl_points = sorted(list(zip(ch_df['Offset'].tolist(), ch_df['Elevation'].tolist())), key=lambda pt: pt[0])
+                        ogl_line = LineString([(-500, ogl_points[0][1])] + ogl_points + [(500, ogl_points[-1][1])])
+                        frl_v = st.session_state.frl_dict[ch_str]
+                        
+                        prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y, outer_l_x, outer_l_y, outer_r_x, outer_r_y = get_geometry(ogl_line, frl_v)
+                        
+                        cut_area, fill_area = 0.0, 0.0
+                        try:
+                            datum_y = min([y for x, y in ogl_points] + [y for x, y in prop_pts]) - 10
+                            prop_poly = Polygon(prop_pts + [(prop_pts[-1][0], datum_y), (prop_pts[0][0], datum_y)])
+                            ogl_poly = Polygon([prop_pts[0]] + [(x, y) for x, y in ogl_points if prop_pts[0][0] < x < prop_pts[-1][0]] + [prop_pts[-1], (prop_pts[-1][0], datum_y), (prop_pts[0][0], datum_y)])
+                            cut_area = ogl_poly.difference(prop_poly).area
+                            fill_area = prop_poly.difference(ogl_poly).area
+                        except:
+                            pass
+                            
+                        L = ch_num - prev_ch if prev_ch is not None else 0.0
+                        c_vol = (L / 2.0) * (prev_cut + cut_area) if prev_ch is not None else 0.0
+                        f_vol = (L / 2.0) * (prev_fill + fill_area) if prev_ch is not None else 0.0
+                        cum_cut += c_vol
+                        cum_fill += f_vol
+                        
+                        row_data = {"Chainage": ch_str, "Length (L)": round(L,3)}
+                        
+                        if include_crust:
+                            x_curr_l, x_curr_r = l_cw_x, r_cw_x
+                            for key in ['bc', 'dbm', 'wmm', 'gsb', 'subgrade']:
+                                thk = crust_thk[key] / 1000.0
+                                if thk > 0:
+                                    top_width = x_curr_r - x_curr_l
+                                    x_next_l = x_curr_l - thk * crust_slope
+                                    x_next_r = x_curr_r + thk * crust_slope
+                                    bot_width = x_next_r - x_next_l
+                                    
+                                    layer_area = 0.5 * (top_width + bot_width) * thk
+                                    row_data[f"{key.upper()} Vol (cum)"] = round(layer_area * L, 3)
+                                    
+                                    x_curr_l, x_curr_r = x_next_l, x_next_r
+                            
+                            sh_area = 0.0
+                            def p_area(x, y):
+                                return 0.5 * abs(sum(x[i]*y[i+1] - x[i+1]*y[i] for i in range(len(x)-1)) + x[-1]*y[0] - x[0]*y[-1])
+                                
+                            if outer_l_x < x_curr_l:
+                                px_l = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
+                                py_l = [l_sh_y, l_cw_y, outer_l_y, outer_l_y]
+                                sh_area += p_area(px_l, py_l)
+                                
+                            if outer_r_x > x_curr_r:
+                                px_r = [r_sh_x, r_cw_x, x_curr_r, outer_r_x]
+                                py_r = [r_sh_y, r_cw_y, outer_r_y, outer_r_y]
+                                sh_area += p_area(px_r, py_r)
+                                
+                            row_data["Earthen Shoulder Vol (cum)"] = round(sh_area * L, 3)
+                                    
+                        row_data.update({
+                            "EW Cut Area": round(cut_area,3), "EW Fill Area": round(fill_area,3), 
+                            "EW Cut Vol": round(c_vol,3), "EW Fill Vol": round(f_vol,3), 
+                            "Cum EW Cut": round(cum_cut,3), "Cum EW Fill": round(cum_fill,3)
+                        })
+                        
+                        qty_data.append(row_data)
+                        prev_ch, prev_cut, prev_fill = ch_num, cut_area, fill_area
+                        
+                    if qty_data:
+                        df_qty = pd.DataFrame(qty_data)
+                        st.dataframe(df_qty)
+                        csv = df_qty.to_csv(index=False).encode('utf-8')
+                        st.download_button(label="⬇ Download Advanced QTY Sheet (CSV)", data=csv, file_name="Earthwork_Pavement_Qty_Sheet.csv", mime="text/csv")
+else:
+    st.info("Please upload OGL CSV from the sidebar to begin.")
