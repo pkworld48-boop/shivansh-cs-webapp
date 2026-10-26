@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.7)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.8)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -247,7 +247,6 @@ if not st.session_state.ogl_df.empty:
             
         fig, ax = plt.subplots(figsize=(11, 7.8))
         
-        # NAYA BADLAAV: Left margin ko 0.25 se badhakar 0.300 kar diya taaki legend ko aur jagah mil sake
         fig.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82) 
         
         fig.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
@@ -348,8 +347,10 @@ if not st.session_state.ogl_df.empty:
             nan = float('nan')
             y_p = [float(y) if y != "-" else nan for y in hatch_elevs]
             y_o = [float(y) if y != "-" else nan for y in cell_text[1]]
-            ax.fill_between(sorted_x, y_o, y_p, where=[p >= o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='lightblue', edgecolor='blue', alpha=0.3, hatch='///', label='EW Fill')
-            ax.fill_between(sorted_x, y_o, y_p, where=[p < o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='lightpink', edgecolor='red', alpha=0.3, hatch='\\\\\\', label='EW Cut')
+            
+            # NAYA BADLAAV: Cut ka color Blue aur Fill ka color Maroon kar diya gaya hai
+            ax.fill_between(sorted_x, y_o, y_p, where=[p >= o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='maroon', edgecolor='maroon', alpha=0.3, hatch='///', label='EW Fill')
+            ax.fill_between(sorted_x, y_o, y_p, where=[p < o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='blue', edgecolor='blue', alpha=0.3, hatch='\\\\\\', label='EW Cut')
         except:
             pass
 
@@ -377,7 +378,6 @@ if not st.session_state.ogl_df.empty:
                 handles.append(patch)
                 labels.append(patch.get_label())
         
-        # NAYA BADLAAV: Legend ko thoda aur bahar shift kiya (bbox_to_anchor x=-0.14)
         ax.legend(handles, labels, loc="upper right", bbox_to_anchor=(-0.14, 1), framealpha=1.0, fontsize=8)
         
         x_span = max(sorted_x) - min(sorted_x) if sorted_x else 20
@@ -418,7 +418,6 @@ if not st.session_state.ogl_df.empty:
             if chainages_num:
                 fig_l, ax_l = plt.subplots(figsize=(12, 9.5))
                 
-                # NAYA BADLAAV: L-Section me bhi left margin ko 0.300 kar diya gaya hai
                 fig_l.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82)
                 
                 fig_l.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
@@ -426,8 +425,10 @@ if not st.session_state.ogl_df.empty:
 
                 ax_l.plot(chainages_num, ogl_elevs, marker='o', color='green', label='Center OGL')
                 ax_l.plot(chainages_num, frl_elevs, marker='s', color='red', label='Proposed FRL')
-                ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f >= o for f, o in zip(frl_elevs, ogl_elevs)], color='blue', alpha=0.15, label='Fill Area')
-                ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f < o for f, o in zip(frl_elevs, ogl_elevs)], color='red', alpha=0.15, label='Cut Area')
+                
+                # NAYA BADLAAV: L-Section me bhi Cut = Blue aur Fill = Maroon
+                ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f >= o for f, o in zip(frl_elevs, ogl_elevs)], color='maroon', alpha=0.3, label='Fill Area')
+                ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f < o for f, o in zip(frl_elevs, ogl_elevs)], color='blue', alpha=0.3, label='Cut Area')
                 
                 ax_l.set_xticks([])
                 row_frl = [f"{v:.3f}" for v in frl_elevs]
@@ -449,7 +450,6 @@ if not st.session_state.ogl_df.empty:
                 
                 ax_l.grid(True, linestyle=':', alpha=0.7)
                 
-                # NAYA BADLAAV: L-Section me bhi legend further left kar diya hai
                 ax_l.legend(loc="upper right", bbox_to_anchor=(-0.14, 1), framealpha=1.0, fontsize=8)
                 
                 true_y_min = min(ogl_elevs + frl_elevs)
