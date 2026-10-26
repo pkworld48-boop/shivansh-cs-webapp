@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.6)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.7)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -247,10 +247,9 @@ if not st.session_state.ogl_df.empty:
             
         fig, ax = plt.subplots(figsize=(11, 7.8))
         
-        # NAYA BADLAAV: Legend ab left mein jayega isliye left ka margin 0.25 kar diya aur right wapas 0.95
-        fig.subplots_adjust(left=0.250, bottom=0.55, right=0.95, top=0.82) 
+        # NAYA BADLAAV: Left margin ko 0.25 se badhakar 0.300 kar diya taaki legend ko aur jagah mil sake
+        fig.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82) 
         
-        # Heading aur logo position bhi shift ki hai thodi si
         fig.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
         fig.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
 
@@ -329,7 +328,6 @@ if not st.session_state.ogl_df.empty:
             fill_area = prop_poly.difference(ogl_poly).area
             
             qty_text = f"Earthwork Cut = {cut_area:.3f} sq.m\nEarthwork Fill = {fill_area:.3f} sq.m"
-            # Text box ko thoda upar shift kiya
             ax.text(0.02, 0.98, qty_text, transform=ax.transAxes, fontsize=9, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
         except:
             pass
@@ -379,8 +377,8 @@ if not st.session_state.ogl_df.empty:
                 handles.append(patch)
                 labels.append(patch.get_label())
         
-        # NAYA BADLAAV: Legend ko left me Elevation ke bagal me set kar diya
-        ax.legend(handles, labels, loc="upper right", bbox_to_anchor=(-0.08, 1), framealpha=1.0, fontsize=8)
+        # NAYA BADLAAV: Legend ko thoda aur bahar shift kiya (bbox_to_anchor x=-0.14)
+        ax.legend(handles, labels, loc="upper right", bbox_to_anchor=(-0.14, 1), framealpha=1.0, fontsize=8)
         
         x_span = max(sorted_x) - min(sorted_x) if sorted_x else 20
         ax.set_xlim(min(sorted_x) - x_span * 0.05, max(sorted_x) + x_span * 0.20)
@@ -420,8 +418,8 @@ if not st.session_state.ogl_df.empty:
             if chainages_num:
                 fig_l, ax_l = plt.subplots(figsize=(12, 9.5))
                 
-                # NAYA BADLAAV: L-Section left margin set
-                fig_l.subplots_adjust(left=0.25, bottom=0.55, right=0.95, top=0.82)
+                # NAYA BADLAAV: L-Section me bhi left margin ko 0.300 kar diya gaya hai
+                fig_l.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82)
                 
                 fig_l.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
                 fig_l.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
@@ -451,8 +449,8 @@ if not st.session_state.ogl_df.empty:
                 
                 ax_l.grid(True, linestyle=':', alpha=0.7)
                 
-                # NAYA BADLAAV: L-Section Legend left me set
-                ax_l.legend(loc="upper right", bbox_to_anchor=(-0.08, 1), framealpha=1.0, fontsize=8)
+                # NAYA BADLAAV: L-Section me bhi legend further left kar diya hai
+                ax_l.legend(loc="upper right", bbox_to_anchor=(-0.14, 1), framealpha=1.0, fontsize=8)
                 
                 true_y_min = min(ogl_elevs + frl_elevs)
                 true_y_max = max(ogl_elevs + frl_elevs)
