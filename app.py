@@ -6,6 +6,7 @@ from matplotlib.ticker import MultipleLocator
 from shapely.geometry import LineString, Polygon
 import io
 import zipfile
+import numpy as np
 
 # ================= PAGE SETUP & CSS =================
 st.set_page_config(page_title="Shiv Ansh Infra CS Engine (Pro)", layout="wide", initial_sidebar_state="expanded")
@@ -30,7 +31,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V5.2)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V5.3)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -80,7 +81,6 @@ def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe
 # ================= SIDEBAR UI =================
 st.sidebar.header("📁 File Uploads")
 
-# NAYA BADLAAV: Sample Templates Download Buttons
 ogl_sample = "Chainage,Offset,Elevation\n10,-15,98.500\n10,-10,98.600\n10,-5,98.700\n10,0,98.800\n10,5,98.700\n10,10,98.600\n10,15,98.500\n20,-15,99.100\n20,-10,99.200\n20,-5,99.400\n20,0,99.500\n20,5,99.300\n20,10,99.200\n20,15,99.100"
 frl_sample = "Chainage,FRL\n10,99.500\n20,100.200"
 
@@ -94,7 +94,7 @@ with col_samp2:
 st.sidebar.markdown("---")
 
 ogl_file = st.sidebar.file_uploader("Upload OGL CSV", type=['csv'])
-frl_file = st.sidebar.file_uploader("Upload FRL CSV", type=['csv'])
+frl_file = st.sidebar.file_uploader("Upload FRL CSV (Optional)", type=['csv'])
 
 if ogl_file:
     df = pd.read_csv(ogl_file)
@@ -104,6 +104,9 @@ if ogl_file:
 if frl_file:
     df_f = pd.read_csv(frl_file)
     st.session_state.frl_dict = {f"{float(row['Chainage']):g}": float(row['FRL']) for _, row in df_f.iterrows() if pd.notnull(row['Chainage'])}
+else:
+    if frl_file is None and not st.session_state.frl_dict:
+        st.session_state.frl_dict = {}
 
 st.sidebar.header("📝 Project Details")
 show_branding = st.sidebar.checkbox("☑ Show Company Branding", value=True)
@@ -167,13 +170,14 @@ if not st.session_state.ogl_df.empty:
         ch_sel = st.selectbox("Select Chainage", chainages)
         
     frl_val = st.session_state.frl_dict.get(ch_sel, None)
+    has_frl = frl_val is not None
     
     with col_msg:
         st.write("") 
-        if frl_val is not None:
+        if has_frl:
             st.success(f"Active FRL: {frl_val} m")
         else:
-            st.error("FRL Data Missing for this Chainage!")
+            st.warning("FRL Missing: Showing OGL Only")
             
     with col_btn:
         st.write("") 
@@ -246,26 +250,29 @@ if not st.session_state.ogl_df.empty:
 
     def draw_cs(current_ch):
         ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == current_ch].copy()
-        if ch_df.empty or current_ch not in st.session_state.frl_dict:
+        if ch_df.empty:
             return None
             
-        frl_v = st.session_state.frl_dict[current_ch]
+        is_frl_present = current_ch in st.session_state.frl_dict
+        
         ogl_points = sorted(list(zip(ch_df['Offset'].tolist(), ch_df['Elevation'].tolist())), key=lambda pt: pt[0])
         ogl_line = LineString([(-500, ogl_points[0][1])] + ogl_points + [(500, ogl_points[-1][1])])
         
-        prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y, outer_l_x, outer_l_y, outer_r_x, outer_r_y = get_geometry(ogl_line, frl_v)
+        plot_ogl_x = [pt[0] for pt in ogl_points]
+        plot_ogl_y = [pt[1] for pt in ogl_points]
         
-        prop_x, prop_y = [p[0] for p in prop_pts], [p[1] for p in prop_pts]
-        prop_line = LineString(prop_pts)
-        plot_ogl_x, plot_ogl_y = [pt[0] for pt in ogl_points], [pt[1] for pt in ogl_points]
-        
-        if min(prop_x) < plot_ogl_x[0]:
-            plot_ogl_x.insert(0, min(prop_x)); plot_ogl_y.insert(0, plot_ogl_y[0])
-        if max(prop_x) > plot_ogl_x[-1]:
-            plot_ogl_x.append(max(prop_x)); plot_ogl_y.append(plot_ogl_y[-1])
+        if is_frl_present:
+            frl_v = st.session_state.frl_dict[current_ch]
+            prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y, outer_l_x, outer_l_y, outer_r_x, outer_r_y = get_geometry(ogl_line, frl_v)
+            prop_x, prop_y = [p[0] for p in prop_pts], [p[1] for p in prop_pts]
+            prop_line = LineString(prop_pts)
+            
+            if min(prop_x) < plot_ogl_x[0]:
+                plot_ogl_x.insert(0, min(prop_x)); plot_ogl_y.insert(0, plot_ogl_y[0])
+            if max(prop_x) > plot_ogl_x[-1]:
+                plot_ogl_x.append(max(prop_x)); plot_ogl_y.append(plot_ogl_y[-1])
             
         fig, ax = plt.subplots(figsize=(11, 7.8))
-        
         fig.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82) 
         
         if show_branding:
@@ -276,105 +283,114 @@ if not st.session_state.ogl_df.empty:
         fig.text(0.65, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
 
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
-        ax.plot(prop_x, prop_y, marker='s', color='blue', label='Earthwork / Formation Line', linewidth=2, linestyle='--' if include_crust else '-')
         
-        if include_crust:
-            ax.plot([l_cw_x, 0, r_cw_x], [l_cw_y, frl_v, r_cw_y], color='navy', linewidth=2.5, label='Paved Top Surface')
-            if l_sh_x < l_cw_x:
-                ax.plot([l_sh_x, l_cw_x], [l_sh_y, l_cw_y], color='saddlebrown', linewidth=1.5)
-            if r_sh_x > r_cw_x:
-                ax.plot([r_cw_x, r_sh_x], [r_cw_y, r_sh_y], color='saddlebrown', linewidth=1.5)
-        else:
-            ax.plot([l_sh_x, l_cw_x, 0, r_cw_x, r_sh_x], [l_sh_y, l_cw_y, frl_v, r_cw_y, r_sh_y], color='navy', linewidth=2.5, label='Top Surface')
-            
-        ax.plot([0], [frl_v], marker='*', color='red', markersize=10, label=f'FRL ({frl_v}m)')
-
         layers_legend_handles = []
-        if include_crust and sum(crust_thk.values()) > 0:
-            y_curr_c, y_curr_l, y_curr_r = frl_v, l_cw_y, r_cw_y
-            x_curr_l, x_curr_r = l_cw_x, r_cw_x
+        
+        if is_frl_present:
+            ax.plot(prop_x, prop_y, marker='s', color='blue', label='Earthwork / Formation Line', linewidth=2, linestyle='--' if include_crust else '-')
             
-            layers = [
-                ('BC', crust_thk['bc']/1000.0, 'black', 0.8, ''),
-                ('DBM', crust_thk['dbm']/1000.0, 'dimgray', 0.9, ''),
-                ('WMM', crust_thk['wmm']/1000.0, 'orange', 0.6, '...'),
-                ('GSB', crust_thk['gsb']/1000.0, 'gold', 0.5, 'oo'),
-                ('Subgrade', crust_thk['subgrade']/1000.0, 'saddlebrown', 0.3, 'xx')
-            ]
-            
-            for name, thk, col, alp, htc in layers:
-                if thk > 0:
-                    y_next_c = y_curr_c - thk
-                    y_next_l = y_curr_l - thk
-                    y_next_r = y_curr_r - thk
-                    x_next_l = x_curr_l - thk * crust_slope
-                    x_next_r = x_curr_r + thk * crust_slope
-                    
-                    poly_x = [x_curr_l, 0, x_curr_r, x_next_r, 0, x_next_l]
-                    poly_y = [y_curr_l, y_curr_c, y_curr_r, y_next_r, y_next_c, y_next_l]
-                    ax.fill(poly_x, poly_y, color=col, alpha=alp, hatch=htc, edgecolor='black', linewidth=0.5)
-                    
-                    y_curr_c, y_curr_l, y_curr_r = y_next_c, y_next_l, y_next_r
-                    x_curr_l, x_curr_r = x_next_l, x_next_r
-                    
-                    patch = mpatches.Patch(facecolor=col, alpha=alp, hatch=htc, edgecolor='black', label=f"{name} Layer ({thk*1000:g}mm)")
-                    layers_legend_handles.append(patch)
-            
-            if outer_l_x < x_curr_l:
-                poly_left_sh_x = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
-                poly_left_sh_y = [l_sh_y, l_cw_y, outer_l_y, outer_l_y]
-                ax.fill(poly_left_sh_x, poly_left_sh_y, color='saddlebrown', alpha=0.3, hatch='xx', edgecolor='black', linewidth=0.8)
-                ax.plot([l_sh_x, outer_l_x], [l_sh_y, outer_l_y], color='saddlebrown', linestyle='-', linewidth=1.5)
-            
-            if outer_r_x > x_curr_r:
-                poly_right_sh_x = [r_sh_x, r_cw_x, x_curr_r, outer_r_x]
-                poly_right_sh_y = [r_sh_y, r_cw_y, outer_r_y, outer_r_y]
-                ax.fill(poly_right_sh_x, poly_right_sh_y, color='saddlebrown', alpha=0.3, hatch='xx', edgecolor='black', linewidth=0.8)
-                ax.plot([r_sh_x, outer_r_x], [r_sh_y, outer_r_y], color='saddlebrown', linestyle='-', linewidth=1.5)
-            
-            es_patch = mpatches.Patch(facecolor='saddlebrown', alpha=0.3, hatch='xx', edgecolor='black', label="Earthen Shoulder")
-            layers_legend_handles.append(es_patch)
+            if include_crust:
+                ax.plot([l_cw_x, 0, r_cw_x], [l_cw_y, frl_v, r_cw_y], color='navy', linewidth=2.5, label='Paved Top Surface')
+                if l_sh_x < l_cw_x:
+                    ax.plot([l_sh_x, l_cw_x], [l_sh_y, l_cw_y], color='saddlebrown', linewidth=1.5)
+                if r_sh_x > r_cw_x:
+                    ax.plot([r_cw_x, r_sh_x], [r_cw_y, r_sh_y], color='saddlebrown', linewidth=1.5)
+            else:
+                ax.plot([l_sh_x, l_cw_x, 0, r_cw_x, r_sh_x], [l_sh_y, l_cw_y, frl_v, r_cw_y, r_sh_y], color='navy', linewidth=2.5, label='Top Surface')
+                
+            ax.plot([0], [frl_v], marker='*', color='red', markersize=10, label=f'FRL ({frl_v}m)')
 
-        try:
-            ogl_y_center = float(get_elev(ogl_line, 0))
-            ax.vlines(x=0, ymin=ogl_y_center, ymax=frl_v, color='red', linestyle=':')
-        except:
-            pass
-        
-        cut_area, fill_area = 0.0, 0.0
-        try:
-            datum_y = min([y for x, y in ogl_points] + [y for x, y in prop_pts]) - 10
-            prop_poly = Polygon(prop_pts + [(prop_pts[-1][0], datum_y), (prop_pts[0][0], datum_y)])
-            ogl_poly = Polygon([prop_pts[0]] + [(x, y) for x, y in ogl_points if prop_pts[0][0] < x < prop_pts[-1][0]] + [prop_pts[-1], (prop_pts[-1][0], datum_y), (prop_pts[0][0], datum_y)])
-            cut_area = ogl_poly.difference(prop_poly).area
-            fill_area = prop_poly.difference(ogl_poly).area
-            
-            qty_text = f"Earthwork Cut = {cut_area:.3f} sq.m\nEarthwork Fill = {fill_area:.3f} sq.m"
-            ax.text(0.02, 0.98, qty_text, transform=ax.transAxes, fontsize=9, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
-        except:
-            pass
+            if include_crust and sum(crust_thk.values()) > 0:
+                y_curr_c, y_curr_l, y_curr_r = frl_v, l_cw_y, r_cw_y
+                x_curr_l, x_curr_r = l_cw_x, r_cw_x
+                
+                layers = [
+                    ('BC', crust_thk['bc']/1000.0, 'black', 0.8, ''),
+                    ('DBM', crust_thk['dbm']/1000.0, 'dimgray', 0.9, ''),
+                    ('WMM', crust_thk['wmm']/1000.0, 'orange', 0.6, '...'),
+                    ('GSB', crust_thk['gsb']/1000.0, 'gold', 0.5, 'oo'),
+                    ('Subgrade', crust_thk['subgrade']/1000.0, 'saddlebrown', 0.3, 'xx')
+                ]
+                
+                for name, thk, col, alp, htc in layers:
+                    if thk > 0:
+                        y_next_c = y_curr_c - thk
+                        y_next_l = y_curr_l - thk
+                        y_next_r = y_curr_r - thk
+                        x_next_l = x_curr_l - thk * crust_slope
+                        x_next_r = x_curr_r + thk * crust_slope
+                        
+                        poly_x = [x_curr_l, 0, x_curr_r, x_next_r, 0, x_next_l]
+                        poly_y = [y_curr_l, y_curr_c, y_curr_r, y_next_r, y_next_c, y_next_l]
+                        ax.fill(poly_x, poly_y, color=col, alpha=alp, hatch=htc, edgecolor='black', linewidth=0.5)
+                        
+                        y_curr_c, y_curr_l, y_curr_r = y_next_c, y_next_l, y_next_r
+                        x_curr_l, x_curr_r = x_next_l, x_next_r
+                        
+                        patch = mpatches.Patch(facecolor=col, alpha=alp, hatch=htc, edgecolor='black', label=f"{name} Layer ({thk*1000:g}mm)")
+                        layers_legend_handles.append(patch)
+                
+                if outer_l_x < x_curr_l:
+                    poly_left_sh_x = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
+                    poly_left_sh_y = [l_sh_y, l_cw_y, outer_l_y, outer_l_y]
+                    ax.fill(poly_left_sh_x, poly_left_sh_y, color='saddlebrown', alpha=0.3, hatch='xx', edgecolor='black', linewidth=0.8)
+                    ax.plot([l_sh_x, outer_l_x], [l_sh_y, outer_l_y], color='saddlebrown', linestyle='-', linewidth=1.5)
+                
+                if outer_r_x > x_curr_r:
+                    poly_right_sh_x = [r_sh_x, r_cw_x, x_curr_r, outer_r_x]
+                    poly_right_sh_y = [r_sh_y, r_cw_y, outer_r_y, outer_r_y]
+                    ax.fill(poly_right_sh_x, poly_right_sh_y, color='saddlebrown', alpha=0.3, hatch='xx', edgecolor='black', linewidth=0.8)
+                    ax.plot([r_sh_x, outer_r_x], [r_sh_y, outer_r_y], color='saddlebrown', linestyle='-', linewidth=1.5)
+                
+                es_patch = mpatches.Patch(facecolor='saddlebrown', alpha=0.3, hatch='xx', edgecolor='black', label="Earthen Shoulder")
+                layers_legend_handles.append(es_patch)
 
-        sorted_x = sorted(list(set([round(x, 3) for x in prop_x] + [round(x, 3) for x in plot_ogl_x])))
-        
-        full_top_pts = calculate_toe_points(ogl_line, l_sh_x, l_sh_y, l_slope, True, max_l_toe) + \
-                       [(l_sh_x, l_sh_y), (l_cw_x, l_cw_y), (0, frl_v), (r_cw_x, r_cw_y), (r_sh_x, r_sh_y)] + \
-                       calculate_toe_points(ogl_line, r_sh_x, r_sh_y, r_slope, False, max_r_toe)
-        full_top_line = LineString(full_top_pts)
-        
-        table_elevs = [get_elev(full_top_line, x) for x in sorted_x]
-        hatch_elevs = [get_elev(prop_line, x) for x in sorted_x]
-        
+            try:
+                ogl_y_center = float(get_elev(ogl_line, 0))
+                ax.vlines(x=0, ymin=ogl_y_center, ymax=frl_v, color='red', linestyle=':')
+            except:
+                pass
+            
+            cut_area, fill_area = 0.0, 0.0
+            try:
+                datum_y = min([y for x, y in ogl_points] + [y for x, y in prop_pts]) - 10
+                prop_poly = Polygon(prop_pts + [(prop_pts[-1][0], datum_y), (prop_pts[0][0], datum_y)])
+                ogl_poly = Polygon([prop_pts[0]] + [(x, y) for x, y in ogl_points if prop_pts[0][0] < x < prop_pts[-1][0]] + [prop_pts[-1], (prop_pts[-1][0], datum_y), (prop_pts[0][0], datum_y)])
+                cut_area = ogl_poly.difference(prop_poly).area
+                fill_area = prop_poly.difference(ogl_poly).area
+                
+                qty_text = f"Earthwork Cut = {cut_area:.3f} sq.m\nEarthwork Fill = {fill_area:.3f} sq.m"
+                ax.text(0.02, 0.98, qty_text, transform=ax.transAxes, fontsize=9, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
+            except:
+                pass
+
+            sorted_x = sorted(list(set([round(x, 3) for x in prop_x] + [round(x, 3) for x in plot_ogl_x])))
+            
+            full_top_pts = calculate_toe_points(ogl_line, l_sh_x, l_sh_y, l_slope, True, max_l_toe) + \
+                           [(l_sh_x, l_sh_y), (l_cw_x, l_cw_y), (0, frl_v), (r_cw_x, r_cw_y), (r_sh_x, r_sh_y)] + \
+                           calculate_toe_points(ogl_line, r_sh_x, r_sh_y, r_slope, False, max_r_toe)
+            full_top_line = LineString(full_top_pts)
+            
+            table_elevs = [get_elev(full_top_line, x) for x in sorted_x]
+            hatch_elevs = [get_elev(prop_line, x) for x in sorted_x]
+            
+        else: # FRL Missing
+            sorted_x = sorted(list(set([round(x, 3) for x in plot_ogl_x])))
+            table_elevs = ["-" for _ in sorted_x]
+            hatch_elevs = ["-" for _ in sorted_x]
+            
         cell_text = [table_elevs, [get_elev(ogl_line, x) for x in sorted_x], [f"{x:.3f}" for x in sorted_x]]
         
-        try:
-            nan = float('nan')
-            y_p = [float(y) if y != "-" else nan for y in hatch_elevs]
-            y_o = [float(y) if y != "-" else nan for y in cell_text[1]]
-            
-            ax.fill_between(sorted_x, y_o, y_p, where=[p >= o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='maroon', edgecolor='maroon', alpha=0.3, hatch='///', label='EW Fill')
-            ax.fill_between(sorted_x, y_o, y_p, where=[p < o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='blue', edgecolor='blue', alpha=0.3, hatch='\\\\\\', label='EW Cut')
-        except:
-            pass
+        if is_frl_present:
+            try:
+                nan = float('nan')
+                y_p = [float(y) if y != "-" else nan for y in hatch_elevs]
+                y_o = [float(y) if y != "-" else nan for y in cell_text[1]]
+                
+                ax.fill_between(sorted_x, y_o, y_p, where=[p >= o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='maroon', edgecolor='maroon', alpha=0.3, hatch='///', label='EW Fill')
+                ax.fill_between(sorted_x, y_o, y_p, where=[p < o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='blue', edgecolor='blue', alpha=0.3, hatch='\\\\\\', label='EW Cut')
+            except:
+                pass
 
         ax.set_xticks([])
         
@@ -392,207 +408,4 @@ if not st.session_state.ogl_df.empty:
         
         ax.set_title(f"{title_prefix} {current_ch}", pad=15)
         ax.set_ylabel("Elevation (m)")
-        ax.grid(True, linestyle=':', alpha=0.7)
-        
-        handles, labels = ax.get_legend_handles_labels()
-        if include_crust and layers_legend_handles:
-            for patch in layers_legend_handles:
-                handles.append(patch)
-                labels.append(patch.get_label())
-        
-        ax.legend(handles, labels, loc="upper right", bbox_to_anchor=(-0.14, 1), framealpha=1.0, fontsize=8)
-        
-        x_span = max(sorted_x) - min(sorted_x) if sorted_x else 20
-        ax.set_xlim(min(sorted_x) - x_span * 0.05, max(sorted_x) + x_span * 0.20)
-        y_min, y_max = ax.get_ylim()
-        ax.set_ylim(y_min - (y_max - y_min)*0.05, y_max + (y_max - y_min) * 0.55)
-        
-        return fig
-
-    if view_mode == "Cross Section":
-        st.subheader("Cross Section Preview")
-        if frl_val is not None:
-            fig_cs = draw_cs(ch_sel)
-            if fig_cs:
-                st.pyplot(fig_cs)
-                buf = io.BytesIO()
-                fig_cs.savefig(buf, format="pdf", bbox_inches="tight")
-                st.download_button(label=f"🖨️ Download C/S CH:{ch_sel} (PDF)", data=buf.getvalue(), file_name=f"CS_{ch_sel}.pdf", mime="application/pdf")
-
-    elif view_mode == "L-Section":
-        st.subheader("L-Section Profile")
-        if st.session_state.frl_dict:
-            ch_list = []
-            for c in chainages:
-                try:
-                    ch_list.append((float(c), c))
-                except:
-                    pass
-            ch_list.sort(key=lambda x: x[0])
-            chainages_num, ogl_elevs, frl_elevs = [], [], []
-            for num, c_str in ch_list:
-                if c_str in st.session_state.frl_dict:
-                    df_c = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == c_str].copy()
-                    center_row = df_c.loc[df_c['Offset'].astype(float).abs().idxmin()]
-                    chainages_num.append(num)
-                    ogl_elevs.append(float(center_row['Elevation']))
-                    frl_elevs.append(st.session_state.frl_dict[c_str])
-            if chainages_num:
-                fig_l, ax_l = plt.subplots(figsize=(12, 9.5))
-                
-                fig_l.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82)
-                
-                if show_branding:
-                    fig_l.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
-                    fig_l.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
-                
-                fig_l.text(0.65, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
-                fig_l.text(0.65, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
-
-                ax_l.plot(chainages_num, ogl_elevs, marker='o', color='green', label='Center OGL')
-                ax_l.plot(chainages_num, frl_elevs, marker='s', color='red', label='Proposed FRL')
-                
-                ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f >= o for f, o in zip(frl_elevs, ogl_elevs)], color='maroon', alpha=0.3, label='Fill Area')
-                ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f < o for f, o in zip(frl_elevs, ogl_elevs)], color='blue', alpha=0.3, label='Cut Area')
-                
-                ax_l.set_xticks([])
-                row_frl = [f"{v:.3f}" for v in frl_elevs]
-                row_ogl = [f"{v:.3f}" for v in ogl_elevs]
-                row_ch = [f"{v:g}" for v in chainages_num]
-                
-                t_table = ax_l.table(cellText=[row_frl, row_ogl, row_ch], rowLabels=["Proposed FRL (m)", "Center OGL (m)", "Chainage (m)"], loc='bottom', bbox=[0, -0.75, 1, 0.70])
-                t_table.auto_set_font_size(False)
-                t_table.set_fontsize(8)
-                for (row, col), cell in t_table.get_celld().items():
-                    if col >= 0:
-                        cell.get_text().set_rotation(90)
-                
-                ax_l.set_title("Longitudinal Section (L-Section)", fontweight='bold', pad=15)
-                ax_l.set_ylabel("Elevation (m)")
-                
-                ax_l.yaxis.set_major_locator(MultipleLocator(0.5))  
-                ax_l.tick_params(axis='y', labelsize=8) 
-                
-                ax_l.grid(True, linestyle=':', alpha=0.7)
-                
-                ax_l.legend(loc="upper right", bbox_to_anchor=(-0.14, 1), framealpha=1.0, fontsize=8)
-                
-                true_y_min = min(ogl_elevs + frl_elevs)
-                true_y_max = max(ogl_elevs + frl_elevs)
-                ax_l.set_ylim(true_y_min - 2, true_y_max + 3) 
-                x_span = max(chainages_num) - min(chainages_num) if chainages_num else 100
-                ax_l.set_xlim(min(chainages_num) - x_span * 0.05, max(chainages_num) + x_span * 0.25)
-                
-                st.pyplot(fig_l)
-                buf_l = io.BytesIO()
-                fig_l.savefig(buf_l, format="pdf", bbox_inches="tight")
-                st.download_button(label="🖨 Download L-Section (PDF)", data=buf_l.getvalue(), file_name="L_Section.pdf", mime="application/pdf")
-
-    st.markdown("---")
-    st.subheader("📦 Advanced QTY & Export (Pro)")
-    
-    col_x1, col_x2 = st.columns(2)
-    with col_x1:
-        if st.button("📦 Generate Batch PDF (ZIP)"):
-            with st.spinner("Generating all PDFs... Please wait..."):
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, "w") as zf:
-                    for c in chainages:
-                        if c in st.session_state.frl_dict:
-                            f = draw_cs(c)
-                            if f:
-                                b = io.BytesIO()
-                                f.savefig(b, format="pdf", bbox_inches="tight")
-                                zf.writestr(f"CS_CH_{c}.pdf", b.getvalue())
-                                plt.close(f)
-                st.success("Batch Generated!")
-                st.download_button(label="⬇ Download All PDFs (ZIP)", data=zip_buffer.getvalue(), file_name="All_Cross_Sections.zip", mime="application/zip")
-
-    with col_x2:
-        if st.button("📊 Calculate Advanced QTY Sheet"):
-            with st.spinner("Calculating Trapz Volumes & Crust..."):
-                ch_list = []
-                for c in chainages:
-                    try:
-                        ch_list.append((float(c), c))
-                    except:
-                        pass
-                ch_list.sort(key=lambda x: x[0])
-                qty_data = []
-                prev_ch, prev_cut, prev_fill = None, 0.0, 0.0
-                cum_cut, cum_fill = 0.0, 0.0
-                
-                for ch_num, ch_str in ch_list:
-                    if ch_str not in st.session_state.frl_dict: continue
-                    ch_df = st.session_state.ogl_df[st.session_state.ogl_df['Chainage'] == ch_str].copy()
-                    ogl_points = sorted(list(zip(ch_df['Offset'].tolist(), ch_df['Elevation'].tolist())), key=lambda pt: pt[0])
-                    ogl_line = LineString([(-500, ogl_points[0][1])] + ogl_points + [(500, ogl_points[-1][1])])
-                    frl_v = st.session_state.frl_dict[ch_str]
-                    
-                    prop_pts, l_cw_x, l_cw_y, r_cw_x, r_cw_y, l_sh_x, l_sh_y, r_sh_x, r_sh_y, outer_l_x, outer_l_y, outer_r_x, outer_r_y = get_geometry(ogl_line, frl_v)
-                    
-                    cut_area, fill_area = 0.0, 0.0
-                    try:
-                        datum_y = min([y for x, y in ogl_points] + [y for x, y in prop_pts]) - 10
-                        prop_poly = Polygon(prop_pts + [(prop_pts[-1][0], datum_y), (prop_pts[0][0], datum_y)])
-                        ogl_poly = Polygon([prop_pts[0]] + [(x, y) for x, y in ogl_points if prop_pts[0][0] < x < prop_pts[-1][0]] + [prop_pts[-1], (prop_pts[-1][0], datum_y), (prop_pts[0][0], datum_y)])
-                        cut_area = ogl_poly.difference(prop_poly).area
-                        fill_area = prop_poly.difference(ogl_poly).area
-                    except:
-                        pass
-                        
-                    L = ch_num - prev_ch if prev_ch is not None else 0.0
-                    c_vol = (L / 2.0) * (prev_cut + cut_area) if prev_ch is not None else 0.0
-                    f_vol = (L / 2.0) * (prev_fill + fill_area) if prev_ch is not None else 0.0
-                    cum_cut += c_vol
-                    cum_fill += f_vol
-                    
-                    row_data = {"Chainage": ch_str, "Length (L)": round(L,3)}
-                    
-                    if include_crust:
-                        x_curr_l, x_curr_r = l_cw_x, r_cw_x
-                        for key in ['bc', 'dbm', 'wmm', 'gsb', 'subgrade']:
-                            thk = crust_thk[key] / 1000.0
-                            if thk > 0:
-                                top_width = x_curr_r - x_curr_l
-                                x_next_l = x_curr_l - thk * crust_slope
-                                x_next_r = x_curr_r + thk * crust_slope
-                                bot_width = x_next_r - x_next_l
-                                
-                                layer_area = 0.5 * (top_width + bot_width) * thk
-                                row_data[f"{key.upper()} Vol (cum)"] = round(layer_area * L, 3)
-                                
-                                x_curr_l, x_curr_r = x_next_l, x_next_r
-                        
-                        sh_area = 0.0
-                        def p_area(x, y):
-                            return 0.5 * abs(sum(x[i]*y[i+1] - x[i+1]*y[i] for i in range(len(x)-1)) + x[-1]*y[0] - x[0]*y[-1])
-                            
-                        if outer_l_x < x_curr_l:
-                            px_l = [l_sh_x, l_cw_x, x_curr_l, outer_l_x]
-                            py_l = [l_sh_y, l_cw_y, outer_l_y, outer_l_y]
-                            sh_area += p_area(px_l, py_l)
-                            
-                        if outer_r_x > x_curr_r:
-                            px_r = [r_sh_x, r_cw_x, x_curr_r, outer_r_x]
-                            py_r = [r_sh_y, r_cw_y, outer_r_y, outer_r_y]
-                            sh_area += p_area(px_r, py_r)
-                            
-                        row_data["Earthen Shoulder Vol (cum)"] = round(sh_area * L, 3)
-                                
-                    row_data.update({
-                        "EW Cut Area": round(cut_area,3), "EW Fill Area": round(fill_area,3), 
-                        "EW Cut Vol": round(c_vol,3), "EW Fill Vol": round(f_vol,3), 
-                        "Cum EW Cut": round(cum_cut,3), "Cum EW Fill": round(cum_fill,3)
-                    })
-                    
-                    qty_data.append(row_data)
-                    prev_ch, prev_cut, prev_fill = ch_num, cut_area, fill_area
-                    
-                if qty_data:
-                    df_qty = pd.DataFrame(qty_data)
-                    st.dataframe(df_qty)
-                    csv = df_qty.to_csv(index=False).encode('utf-8')
-                    st.download_button(label="⬇ Download Advanced QTY Sheet (CSV)", data=csv, file_name="Earthwork_Pavement_Qty_Sheet.csv", mime="text/csv")
-else:
-    st.info("Please upload OGL CSV from the sidebar to begin.")
+        ax.grid(True, linestyle=':', alpha=
