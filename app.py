@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.9)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V5.0)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -91,8 +91,9 @@ if frl_file:
     df_f = pd.read_csv(frl_file)
     st.session_state.frl_dict = {f"{float(row['Chainage']):g}": float(row['FRL']) for _, row in df_f.iterrows() if pd.notnull(row['Chainage'])}
 
-# NAYA BADLAAV: Project Details for Top Center Heading
 st.sidebar.header("📝 Project Details")
+# NAYA BADLAAV: Company ka naam hide/show karne ka option
+show_branding = st.sidebar.checkbox("☑ Show Company Branding", value=True)
 dept_name = st.sidebar.text_input("Department Name", "Public Works Department (PWD)")
 work_name = st.sidebar.text_input("Name of Work", "Construction of Road Project")
 
@@ -254,11 +255,11 @@ if not st.session_state.ogl_df.empty:
         
         fig.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82) 
         
-        # Original Left Logo
-        fig.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
-        fig.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
+        # NAYA BADLAAV: Tickbox ke hisaab se branding dikhana
+        if show_branding:
+            fig.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
+            fig.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
         
-        # NAYA BADLAAV: Top Center Heading for Department & Work
         fig.text(0.50, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
         fig.text(0.50, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
 
@@ -429,10 +430,11 @@ if not st.session_state.ogl_df.empty:
                 
                 fig_l.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82)
                 
-                fig_l.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
-                fig_l.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
+                # NAYA BADLAAV: Tickbox ke hisaab se L-Section pe bhi branding hide ho jayegi
+                if show_branding:
+                    fig_l.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
+                    fig_l.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
                 
-                # NAYA BADLAAV: Top Center Heading for L-Section as well
                 fig_l.text(0.50, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
                 fig_l.text(0.50, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
 
