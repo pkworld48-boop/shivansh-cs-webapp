@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V5.1)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V5.2)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -79,6 +79,20 @@ def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe
 
 # ================= SIDEBAR UI =================
 st.sidebar.header("📁 File Uploads")
+
+# NAYA BADLAAV: Sample Templates Download Buttons
+ogl_sample = "Chainage,Offset,Elevation\n10,-15,98.500\n10,-10,98.600\n10,-5,98.700\n10,0,98.800\n10,5,98.700\n10,10,98.600\n10,15,98.500\n20,-15,99.100\n20,-10,99.200\n20,-5,99.400\n20,0,99.500\n20,5,99.300\n20,10,99.200\n20,15,99.100"
+frl_sample = "Chainage,FRL\n10,99.500\n20,100.200"
+
+st.sidebar.markdown("<span style='font-size:12px; color:gray;'>Download Sample Formats:</span>", unsafe_allow_html=True)
+col_samp1, col_samp2 = st.sidebar.columns(2)
+with col_samp1:
+    st.download_button(label="📄 OGL Template", data=ogl_sample, file_name="Sample_OGL.csv", mime="text/csv", use_container_width=True)
+with col_samp2:
+    st.download_button(label="📄 FRL Template", data=frl_sample, file_name="Sample_FRL.csv", mime="text/csv", use_container_width=True)
+
+st.sidebar.markdown("---")
+
 ogl_file = st.sidebar.file_uploader("Upload OGL CSV", type=['csv'])
 frl_file = st.sidebar.file_uploader("Upload FRL CSV", type=['csv'])
 
@@ -258,7 +272,6 @@ if not st.session_state.ogl_df.empty:
             fig.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
             fig.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
         
-        # NAYA BADLAAV: Heading ab thodi aur right side shift (0.65) kar di hai taaki graph ke perfectly center me rahe
         fig.text(0.65, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
         fig.text(0.65, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
 
@@ -433,7 +446,6 @@ if not st.session_state.ogl_df.empty:
                     fig_l.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
                     fig_l.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
                 
-                # NAYA BADLAAV: L-Section me bhi heading right shift (0.65) kar di gayi hai
                 fig_l.text(0.65, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
                 fig_l.text(0.65, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
 
