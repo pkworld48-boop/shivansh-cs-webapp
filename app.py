@@ -30,7 +30,7 @@ if 'ogl_df' not in st.session_state:
 if 'frl_dict' not in st.session_state:
     st.session_state.frl_dict = {}
 
-st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.8)")
+st.title("Shiv Ansh Infra Earthwork CS Engine (Pro V4.9)")
 
 # ================= CORE FUNCTIONS =================
 def calculate_toe_points(ogl_line, edge_x, edge_y, slope_ratio, is_left, max_toe):
@@ -90,6 +90,11 @@ if ogl_file:
 if frl_file:
     df_f = pd.read_csv(frl_file)
     st.session_state.frl_dict = {f"{float(row['Chainage']):g}": float(row['FRL']) for _, row in df_f.iterrows() if pd.notnull(row['Chainage'])}
+
+# NAYA BADLAAV: Project Details for Top Center Heading
+st.sidebar.header("📝 Project Details")
+dept_name = st.sidebar.text_input("Department Name", "Public Works Department (PWD)")
+work_name = st.sidebar.text_input("Name of Work", "Construction of Road Project")
 
 st.sidebar.header("⚙️ Parameters")
 title_prefix = st.sidebar.text_input("Plot Title Prefix", "Cross Section at CH: ")
@@ -249,8 +254,13 @@ if not st.session_state.ogl_df.empty:
         
         fig.subplots_adjust(left=0.300, bottom=0.55, right=0.95, top=0.82) 
         
+        # Original Left Logo
         fig.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
         fig.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
+        
+        # NAYA BADLAAV: Top Center Heading for Department & Work
+        fig.text(0.50, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
+        fig.text(0.50, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
 
         ax.plot(plot_ogl_x, plot_ogl_y, marker='o', color='green', label='OGL', linewidth=2)
         ax.plot(prop_x, prop_y, marker='s', color='blue', label='Earthwork / Formation Line', linewidth=2, linestyle='--' if include_crust else '-')
@@ -348,7 +358,6 @@ if not st.session_state.ogl_df.empty:
             y_p = [float(y) if y != "-" else nan for y in hatch_elevs]
             y_o = [float(y) if y != "-" else nan for y in cell_text[1]]
             
-            # NAYA BADLAAV: Cut ka color Blue aur Fill ka color Maroon kar diya gaya hai
             ax.fill_between(sorted_x, y_o, y_p, where=[p >= o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='maroon', edgecolor='maroon', alpha=0.3, hatch='///', label='EW Fill')
             ax.fill_between(sorted_x, y_o, y_p, where=[p < o for p, o in zip(y_p, y_o)], interpolate=True, facecolor='blue', edgecolor='blue', alpha=0.3, hatch='\\\\\\', label='EW Cut')
         except:
@@ -422,11 +431,14 @@ if not st.session_state.ogl_df.empty:
                 
                 fig_l.text(0.05, 0.95, "SHIV ANSH INFRA", fontsize=16, fontweight='bold', color='navy')
                 fig_l.text(0.05, 0.91, "DGPS Survey & Infra Solutions", fontsize=10, fontstyle='italic', color='dimgray')
+                
+                # NAYA BADLAAV: Top Center Heading for L-Section as well
+                fig_l.text(0.50, 0.96, dept_name, fontsize=14, fontweight='bold', ha='center', color='black')
+                fig_l.text(0.50, 0.92, work_name, fontsize=11, ha='center', color='dimgray')
 
                 ax_l.plot(chainages_num, ogl_elevs, marker='o', color='green', label='Center OGL')
                 ax_l.plot(chainages_num, frl_elevs, marker='s', color='red', label='Proposed FRL')
                 
-                # NAYA BADLAAV: L-Section me bhi Cut = Blue aur Fill = Maroon
                 ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f >= o for f, o in zip(frl_elevs, ogl_elevs)], color='maroon', alpha=0.3, label='Fill Area')
                 ax_l.fill_between(chainages_num, ogl_elevs, frl_elevs, where=[f < o for f, o in zip(frl_elevs, ogl_elevs)], color='blue', alpha=0.3, label='Cut Area')
                 
